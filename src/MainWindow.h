@@ -31,6 +31,7 @@ private:
 
     bool importSpreadsheetFlow();
     bool convertSpreadsheetToCsv(const QString &inputPath, QString *outputCsvPath, QString *error) const;
+    bool convertXlsxToCsvWithPython(const QString &inputPath, const QString &outputPath, QString *error) const;
     bool loadCsvIntoBomTable(const QString &csvPath, QString *error);
     QStringList parseCsvLine(const QString &line) const;
 

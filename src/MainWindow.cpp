@@ -671,6 +671,19 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
     const QFileInfo info(inputPath);
     const QString outPath = QDir(tempDir).filePath(QStringLiteral("%1_starbom.csv").arg(info.completeBaseName()));
 
+    if (info.suffix().compare(QStringLiteral("xlsx"), Qt::CaseInsensitive) == 0) {
+        QString pyError;
+        if (convertXlsxToCsvWithPython(inputPath, outPath, &pyError) && QFile::exists(outPath)) {
+            if (outputCsvPath) {
+                *outputCsvPath = outPath;
+            }
+            return true;
+        }
+        if (error && !pyError.isEmpty()) {
+            *error = pyError;
+        }
+    }
+
     auto runConverter = [&](const QString &program, const QStringList &args) -> bool {
         QProcess process;
         process.start(program, args);
@@ -709,10 +722,96 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
     }
 
     if (error) {
-        *error = QStringLiteral("系统未检测到可用转换器（libreoffice/ssconvert），请安装后重试，或先另存为 CSV。\n文件：%1")
+        *error = QStringLiteral("导入失败：未检测到可用转换器（libreoffice/ssconvert），且内置 xlsx 解析不可用。\n"
+                                "建议：安装 libreoffice 或 ssconvert，或先另存为 CSV。\n文件：%1")
                      .arg(inputPath);
     }
     return false;
+}
+
+bool MainWindow::convertXlsxToCsvWithPython(const QString &inputPath, const QString &outputPath, QString *error) const
+{
+    const QString pythonCode = QStringLiteral(R"PY(
+import csv
+import sys
+import zipfile
+import xml.etree.ElementTree as ET
+
+in_path, out_path = sys.argv[1], sys.argv[2]
+ns = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+
+with zipfile.ZipFile(in_path, 'r') as zf:
+    shared = []
+    if 'xl/sharedStrings.xml' in zf.namelist():
+        root = ET.fromstring(zf.read('xl/sharedStrings.xml'))
+        for si in root.findall('m:si', ns):
+            text = ''.join(t.text or '' for t in si.findall('.//m:t', ns))
+            shared.append(text)
+
+    sheet_name = 'xl/worksheets/sheet1.xml'
+    if sheet_name not in zf.namelist():
+        sheets = [n for n in zf.namelist() if n.startswith('xl/worksheets/sheet') and n.endswith('.xml')]
+        if not sheets:
+            raise RuntimeError('xlsx 中未找到工作表')
+        sheet_name = sorted(sheets)[0]
+
+    root = ET.fromstring(zf.read(sheet_name))
+    rows = []
+    for row in root.findall('.//m:sheetData/m:row', ns):
+        cells = {}
+        max_col = -1
+        for c in row.findall('m:c', ns):
+            ref = c.attrib.get('r', '')
+            letters = ''.join(ch for ch in ref if ch.isalpha())
+            col = 0
+            for ch in letters:
+                col = col * 26 + (ord(ch.upper()) - 64)
+            col = max(col - 1, 0)
+            max_col = max(max_col, col)
+
+            t = c.attrib.get('t', '')
+            v = c.find('m:v', ns)
+            val = ''
+            if t == 'inlineStr':
+                it = c.find('m:is/m:t', ns)
+                if it is not None and it.text:
+                    val = it.text
+            elif t == 's' and v is not None and v.text and v.text.isdigit():
+                idx = int(v.text)
+                if 0 <= idx < len(shared):
+                    val = shared[idx]
+            elif v is not None and v.text:
+                val = v.text
+            cells[col] = val
+
+        if max_col >= 0:
+            line = [''] * (max_col + 1)
+            for k, v in cells.items():
+                line[k] = v
+            rows.append(line)
+
+with open(out_path, 'w', encoding='utf-8', newline='') as fp:
+    writer = csv.writer(fp)
+    writer.writerows(rows)
+)PY");
+
+    QProcess process;
+    process.start(QStringLiteral("python3"), {QStringLiteral("-c"), pythonCode, inputPath, outputPath});
+    if (!process.waitForStarted(3000)) {
+        if (error) {
+            *error = QStringLiteral("未找到 python3，无法使用内置 xlsx 解析。");
+        }
+        return false;
+    }
+
+    process.waitForFinished(20000);
+    const bool ok = process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0 && QFile::exists(outputPath);
+    if (!ok && error) {
+        const QString stderrMsg = QString::fromUtf8(process.readAllStandardError()).trimmed();
+        *error = stderrMsg.isEmpty() ? QStringLiteral("内置 xlsx 解析失败。")
+                                    : QStringLiteral("内置 xlsx 解析失败：%1").arg(stderrMsg);
+    }
+    return ok;
 }
 
 bool MainWindow::loadCsvIntoBomTable(const QString &csvPath, QString *error)
