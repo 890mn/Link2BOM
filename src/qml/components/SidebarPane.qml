@@ -18,7 +18,12 @@ Rectangle {
     border.color: themeColors.border
 
     FontLoader {
-        id: brushFont
+        id: Audiowide
+        source: "qrc:/qt/qml/StarBOM/src/asset/Audiowide-Regular.ttf"
+    }
+
+    FontLoader {
+        id: Audiowide
         source: "qrc:/qt/qml/StarBOM/src/asset/Audiowide-Regular.ttf"
     }
 
@@ -31,7 +36,7 @@ Rectangle {
             Layout.fillWidth: true
             Label {
                 text: "StarBOM"
-                font.family: brushFont.name
+                font.family: Audiowide.name
                 font.pixelSize: 34
                 font.bold: true
                 color: themeColors.primary
