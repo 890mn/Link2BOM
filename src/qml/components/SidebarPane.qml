@@ -93,23 +93,21 @@ Rectangle {
                     model: app.projects.model
                     currentIndex: Math.max(0, app.projects.projectNames(true).indexOf(app.projects.selectedProject))
                     delegate: ItemDelegate {
-                        required property int index
-                        required property string display
                         width: ListView.view.width
-                        text: display
+                        text: modelData
                         leftPadding: 14
                         background: Rectangle {
-                            color: app.projects.selectedProject === display ? Qt.rgba(46/255, 91/255, 1, 0.12) : "transparent"
+                            color: app.projects.selectedProject === modelData ? Qt.rgba(46/255, 91/255, 1, 0.12) : "transparent"
                             Rectangle {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: app.projects.selectedProject === display ? 5 : 2
+                                width: app.projects.selectedProject === modelData ? 5 : 2
                                 height: parent.height * 0.72
                                 radius: 2
-                                color: app.projects.selectedProject === display ? root.primaryColor() : "transparent"
+                                color: app.projects.selectedProject === modelData ? root.primaryColor() : "transparent"
                             }
                         }
-                        onClicked: app.projects.selectedProject = display
+                        onClicked: app.projects.selectedProject = modelData
                     }
                 }
                 RowLayout {
@@ -138,11 +136,9 @@ Rectangle {
                     Layout.fillHeight: true
                     model: app.categories.model
                     delegate: ItemDelegate {
-                        required property int index
-                        required property string display
                         width: ListView.view.width
-                        text: display
-                        onClicked: { categoryList.currentIndex = index; root.selectedCategoryName = display }
+                        text: modelData
+                        onClicked: { categoryList.currentIndex = index; root.selectedCategoryName = modelData }
                     }
                 }
                 RowLayout {
