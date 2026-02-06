@@ -22,11 +22,6 @@ Rectangle {
         source: "qrc:/qt/qml/StarBOM/src/asset/Audiowide-Regular.ttf"
     }
 
-    FontLoader {
-        id: Audiowide
-        source: "qrc:/qt/qml/StarBOM/src/asset/Audiowide-Regular.ttf"
-    }
-
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
