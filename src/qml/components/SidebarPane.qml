@@ -17,6 +17,11 @@ Rectangle {
     color: themeColors.card
     border.color: themeColors.border
 
+    FontLoader {
+        id: brushFont
+        source: "qrc:/qt/qml/StarBOM/src/asset/Audiowide-Regular.ttf"
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
@@ -24,31 +29,34 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            Label { text: "StarBOM"; font.pixelSize: 34; font.bold: true; color: themeColors.primary }
-            Item { Layout.fillWidth: true }
-            Text {
-                text: "<span style='font-size:12px'>🐙</span> <a href='https://github.com/890mn/StarBOM'>890mn</a>"
-                textFormat: Text.RichText
-                onLinkActivated: Qt.openUrlExternally(link)
+            Label {
+                text: "StarBOM"
+                font.family: brushFont.name
+                font.pixelSize: 34
+                font.bold: true
+                color: themeColors.primary
             }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            Label { text: "主题："; color: themeColors.text }
             Text {
                 text: app.theme.currentThemeName
+                font.pixelSize: 34
                 color: themeColors.primary
                 font.bold: true
-                font.underline: true
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: app.cycleTheme()
                 }
             }
-            Item { Layout.fillWidth: true }
-            Label { text: "v0.3.0"; color: themeColors.muted; font.pixelSize: 12 }
+        }
+
+        RowLayout {
+
+            Text {
+                text: "<span style='font-size:12px'>🐙</span> <a href='https://github.com/890mn/StarBOM'>890mn</a>"
+                textFormat: Text.RichText
+                onLinkActivated: Qt.openUrlExternally(link)
+            }
+            Label { text: "v0.0.4"; color: themeColors.muted; font.pixelSize: 12 }
         }
 
         GroupBox {
