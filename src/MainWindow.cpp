@@ -21,6 +21,7 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QScreen>
+#include <QSignalBlocker>
 #include <QScrollArea>
 #include <QSplitter>
 #include <QStackedWidget>
@@ -64,8 +65,8 @@ void MainWindow::setupUi()
 
     auto *leftPanel = new QFrame();
     leftPanel->setObjectName(QStringLiteral("leftPanel"));
-    leftPanel->setMinimumWidth(420);
-    leftPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    leftPanel->setFixedWidth(340);
+    leftPanel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     auto *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setContentsMargins(14, 14, 14, 14);
     leftLayout->setSpacing(14);
@@ -80,9 +81,9 @@ void MainWindow::setupUi()
 
     splitter->addWidget(leftScroll);
     splitter->addWidget(rightPanel);
-    splitter->setStretchFactor(0, 2);
-    splitter->setStretchFactor(1, 8);
-    splitter->setSizes({qRound(width() * 0.22), qRound(width() * 0.78)});
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+    splitter->setSizes({340, qMax(900, width() - 340)});
 
     mainLayout->addWidget(splitter);
     setCentralWidget(m_centralWidget);
@@ -104,35 +105,44 @@ void MainWindow::setupLeftPanel()
 
     auto *titleLabel = new QLabel(QStringLiteral("StarBOM"), brandFrame);
     titleLabel->setObjectName(QStringLiteral("titleLabel"));
-    auto *versionLabel = new QLabel(QStringLiteral("v0.3.0"), brandFrame);
-    versionLabel->setObjectName(QStringLiteral("versionLabel"));
-
-    brandLayout->addWidget(titleLabel, 0, 0, 1, 2, Qt::AlignLeft | Qt::AlignVCenter);
-    brandLayout->addWidget(versionLabel, 1, 1, 1, 1, Qt::AlignRight | Qt::AlignTop);
 
     auto *githubLink = new QLabel(leftPanel);
-    githubLink->setText(QStringLiteral("🐙 <a href='https://github.com/890mn/StarBOM'>890mn</a>"));
+    githubLink->setText(QStringLiteral("<span style='font-size:12px'>🐙</span> <a href='https://github.com/890mn/StarBOM'>890mn</a>"));
     githubLink->setTextFormat(Qt::RichText);
     githubLink->setOpenExternalLinks(true);
     githubLink->setTextInteractionFlags(Qt::TextBrowserInteraction);
     githubLink->setObjectName(QStringLiteral("githubLabel"));
 
+    brandLayout->addWidget(titleLabel, 0, 0, 1, 1, Qt::AlignLeft | Qt::AlignVCenter);
+    brandLayout->addWidget(githubLink, 0, 1, 1, 1, Qt::AlignRight | Qt::AlignVCenter);
+
+    auto *metaFrame = new QFrame(leftPanel);
+    auto *metaLayout = new QHBoxLayout(metaFrame);
+    metaLayout->setContentsMargins(6, 0, 6, 0);
+    metaLayout->setSpacing(6);
+    auto *themeLabel = new QLabel(QStringLiteral("主题："), metaFrame);
+    m_themeToggleBtn = new QPushButton(metaFrame);
+    m_themeToggleBtn->setObjectName(QStringLiteral("themeToggleBtn"));
+    m_themeToggleBtn->setFlat(true);
+    m_themeToggleBtn->setCursor(Qt::PointingHandCursor);
+    auto *versionLabel = new QLabel(QStringLiteral("v0.3.0"), metaFrame);
+    versionLabel->setObjectName(QStringLiteral("versionLabel"));
+    metaLayout->addWidget(themeLabel);
+    metaLayout->addWidget(m_themeToggleBtn, 0, Qt::AlignLeft);
+    metaLayout->addStretch();
+    metaLayout->addWidget(versionLabel, 0, Qt::AlignRight);
+
     auto *importGroup = new QGroupBox(QStringLiteral("导入"), leftPanel);
     auto *importLayout = new QVBoxLayout(importGroup);
     importLayout->setSpacing(10);
 
-    m_quickImportInput = new QLineEdit(importGroup);
-    m_quickImportInput->setMinimumHeight(38);
-    m_quickImportInput->setPlaceholderText(QStringLiteral("立创导出内容关键字 / 链接（后续完善）"));
-
-    auto *quickImportBtn = new QPushButton(QStringLiteral("立创导入（规划中）"), importGroup);
+    auto *quickImportBtn = new QPushButton(QStringLiteral("立创导入（XLS）"), importGroup);
     auto *xlsImportBtn = new QPushButton(QStringLiteral("从 XLS/XLSX 导入"), importGroup);
     auto *ocrImportBtn = new QPushButton(QStringLiteral("OCR 图片导入（后续）"), importGroup);
     quickImportBtn->setMinimumHeight(40);
     xlsImportBtn->setMinimumHeight(42);
     ocrImportBtn->setMinimumHeight(40);
 
-    importLayout->addWidget(m_quickImportInput);
     importLayout->addWidget(quickImportBtn);
     importLayout->addWidget(xlsImportBtn);
     importLayout->addWidget(ocrImportBtn);
@@ -186,35 +196,32 @@ void MainWindow::setupLeftPanel()
     categoryLayout->addWidget(m_categoryList);
     categoryLayout->addLayout(categoryBtnLayout);
 
-    auto *themeGroup = new QGroupBox(QStringLiteral("主题"), leftPanel);
-    auto *themeLayout = new QVBoxLayout(themeGroup);
-    themeLayout->setSpacing(8);
-    m_themeSelector = new QComboBox(themeGroup);
-    m_themeSelector->setMinimumHeight(38);
-    m_themeSelector->addItems({QStringLiteral("Aurora Triad"), QStringLiteral("Citrus Triad"), QStringLiteral("Slate Triad")});
-    themeLayout->addWidget(new QLabel(QStringLiteral("三元色主题："), themeGroup));
-    themeLayout->addWidget(m_themeSelector);
-
     layout->addWidget(brandFrame);
-    layout->addWidget(githubLink);
+    layout->addWidget(metaFrame);
     layout->addWidget(importGroup);
     layout->addWidget(exportGroup);
     layout->addWidget(projectGroup, 2);
     layout->addWidget(categoryGroup, 2);
-    layout->addWidget(themeGroup);
     layout->addStretch();
 
-    connect(quickImportBtn, &QPushButton::clicked, this, [this] {
-        const QString key = m_quickImportInput->text().trimmed();
-        if (key.isEmpty()) {
-            updateStatus(QStringLiteral("立创导入：请先输入关键字或链接。"));
+    m_themeSelector = new QComboBox(this);
+    m_themeSelector->addItems({QStringLiteral("Aurora Triad"), QStringLiteral("Citrus Triad"), QStringLiteral("Slate Triad")});
+    m_themeToggleBtn->setText(m_themeSelector->currentText());
+
+    connect(m_themeToggleBtn, &QPushButton::clicked, this, [this] {
+        if (!m_themeSelector || m_themeSelector->count() == 0) {
             return;
         }
-        updateStatus(QStringLiteral("立创导入已就绪，目标项目：%1，输入：%2").arg(currentProjectText(), key));
+        const int next = (m_themeSelector->currentIndex() + 1) % m_themeSelector->count();
+        m_themeSelector->setCurrentIndex(next);
+    });
+
+    connect(quickImportBtn, &QPushButton::clicked, this, [this] {
+        importLichuangSpreadsheetFlow();
     });
 
     connect(xlsImportBtn, &QPushButton::clicked, this, [this] {
-        importSpreadsheetFlow();
+        importLichuangSpreadsheetFlow();
     });
 
     connect(ocrImportBtn, &QPushButton::clicked, this, [this] {
@@ -345,6 +352,23 @@ void MainWindow::setupRightPanel()
 
     auto *bomPage = new QWidget(m_viewStack);
     auto *bomLayout = new QVBoxLayout(bomPage);
+
+    auto *columnConfigRow = new QWidget(bomPage);
+    auto *columnConfigLayout = new QHBoxLayout(columnConfigRow);
+    columnConfigLayout->setContentsMargins(0, 0, 0, 0);
+    columnConfigLayout->setSpacing(6);
+    columnConfigLayout->addWidget(new QLabel(QStringLiteral("显示列："), columnConfigRow));
+    for (int i = 0; i < 6; ++i) {
+        auto *selector = new QComboBox(columnConfigRow);
+        selector->setMinimumWidth(130);
+        m_bomColumnSelectors.append(selector);
+        columnConfigLayout->addWidget(selector);
+        connect(selector, &QComboBox::currentIndexChanged, this, [this](int) {
+            applyBomColumnSelection();
+        });
+    }
+    columnConfigLayout->addStretch();
+
     m_bomTable = new QTableWidget(6, 8, bomPage);
     m_bomTable->setHorizontalHeaderLabels({QStringLiteral("项目"),
                                            QStringLiteral("位号"),
@@ -354,7 +378,9 @@ void MainWindow::setupRightPanel()
                                            QStringLiteral("数量"),
                                            QStringLiteral("供应商"),
                                            QStringLiteral("备注")});
-    m_bomTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_bomTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    m_bomTable->horizontalHeader()->setSectionsClickable(true);
+    m_bomTable->setSortingEnabled(true);
     m_bomTable->verticalHeader()->setVisible(false);
 
     const QList<QStringList> bomRows {
@@ -369,7 +395,11 @@ void MainWindow::setupRightPanel()
             m_bomTable->setItem(i, j, new QTableWidgetItem(bomRows[i][j]));
         }
     }
+    bomLayout->addWidget(columnConfigRow);
     bomLayout->addWidget(m_bomTable);
+    captureBomSourceFromCurrentTable();
+    refreshBomColumnSelectors();
+    applyBomColumnSelection();
 
     auto *inventoryPage = new QWidget(m_viewStack);
     auto *inventoryLayout = new QVBoxLayout(inventoryPage);
@@ -453,6 +483,9 @@ void MainWindow::setupSignals()
 {
     connect(m_themeSelector, &QComboBox::currentTextChanged, this, [this](const QString &name) {
         applyTheme(name);
+        if (m_themeToggleBtn) {
+            m_themeToggleBtn->setText(name);
+        }
         updateStatus(QStringLiteral("主题已切换：%1").arg(name));
     });
 }
@@ -533,17 +566,34 @@ void MainWindow::applyTheme(const QString &themeName)
         }
         QPushButton:hover { background: %4; }
         QPushButton:checked { background: %5; }
+        QPushButton#themeToggleBtn {
+            background: transparent;
+            color: %3;
+            padding: 0;
+            border: none;
+            text-decoration: underline;
+            font-weight: 700;
+        }
+        QPushButton#themeToggleBtn:hover {
+            background: transparent;
+            color: %4;
+        }
         QLineEdit, QListWidget, QTableWidget, QComboBox {
             border: 1px solid #CCD6E2;
             border-radius: 8px;
             background: white;
             padding: 6px;
         }
+        QListWidget::item {
+            border-left: 2px solid transparent;
+            padding-left: 8px;
+        }
         QListWidget::item:selected {
-            background: rgba(46, 91, 255, 0.18);
+            background: rgba(%6, 0.18);
             border-radius: 4px;
             color: #0F172A;
             font-weight: 700;
+            border-left: 5px solid %3;
         }
         QHeaderView::section {
             background: %3;
@@ -555,9 +605,93 @@ void MainWindow::applyTheme(const QString &themeName)
             background: transparent;
         }
     )")
-                              .arg(panel, text, primary, secondary, accent);
+                              .arg(panel, text, primary, secondary, accent, QStringLiteral("%1, %2, %3").arg(QColor(primary).red()).arg(QColor(primary).green()).arg(QColor(primary).blue()));
 
     qApp->setStyleSheet(style);
+}
+
+void MainWindow::captureBomSourceFromCurrentTable()
+{
+    m_bomSourceHeaders.clear();
+    m_bomSourceRows.clear();
+    if (!m_bomTable) {
+        return;
+    }
+
+    for (int c = 0; c < m_bomTable->columnCount(); ++c) {
+        auto *item = m_bomTable->horizontalHeaderItem(c);
+        m_bomSourceHeaders.append(item ? item->text() : QStringLiteral("列%1").arg(c + 1));
+    }
+
+    for (int r = 0; r < m_bomTable->rowCount(); ++r) {
+        QStringList row;
+        for (int c = 0; c < m_bomTable->columnCount(); ++c) {
+            auto *item = m_bomTable->item(r, c);
+            row.append(item ? item->text() : QString());
+        }
+        m_bomSourceRows.append(row);
+    }
+}
+
+void MainWindow::refreshBomColumnSelectors()
+{
+    if (m_bomColumnSelectors.isEmpty()) {
+        return;
+    }
+
+    for (int i = 0; i < m_bomColumnSelectors.size(); ++i) {
+        auto *selector = m_bomColumnSelectors[i];
+        if (!selector) {
+            continue;
+        }
+        const QSignalBlocker blocker(selector);
+        const QString current = selector->currentText();
+        selector->clear();
+        selector->addItems(m_bomSourceHeaders);
+        int index = selector->findText(current, Qt::MatchExactly);
+        if (index < 0) {
+            index = qMin(i, selector->count() - 1);
+        }
+        selector->setCurrentIndex(qMax(index, 0));
+    }
+}
+
+void MainWindow::applyBomColumnSelection()
+{
+    if (!m_bomTable || m_bomSourceHeaders.isEmpty() || m_bomColumnSelectors.isEmpty()) {
+        return;
+    }
+
+    const int visibleCols = m_bomColumnSelectors.size();
+    const int rowCount = m_bomSourceRows.size();
+    m_bomTable->setSortingEnabled(false);
+    m_bomTable->clear();
+    m_bomTable->setColumnCount(visibleCols);
+    m_bomTable->setRowCount(rowCount);
+
+    QStringList viewHeaders;
+    QList<int> sourceIndexes;
+    for (int i = 0; i < visibleCols; ++i) {
+        auto *selector = m_bomColumnSelectors[i];
+        const QString header = selector ? selector->currentText() : QString();
+        viewHeaders.append(header);
+        sourceIndexes.append(m_bomSourceHeaders.indexOf(header));
+    }
+    m_bomTable->setHorizontalHeaderLabels(viewHeaders);
+
+    for (int r = 0; r < rowCount; ++r) {
+        for (int c = 0; c < sourceIndexes.size(); ++c) {
+            const int sourceIndex = sourceIndexes[c];
+            QString text;
+            if (sourceIndex >= 0 && sourceIndex < m_bomSourceRows[r].size()) {
+                text = m_bomSourceRows[r][sourceIndex];
+            }
+            m_bomTable->setItem(r, c, new QTableWidgetItem(text));
+        }
+    }
+
+    m_bomTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    m_bomTable->setSortingEnabled(true);
 }
 
 void MainWindow::updateStatus(const QString &message)
@@ -627,6 +761,108 @@ void MainWindow::highlightInTable(QTableWidget *table, const QString &keyword)
     }
 }
 
+bool MainWindow::ensureProjectForImport(QString *projectName)
+{
+    if (!m_projectList) {
+        return false;
+    }
+
+    QStringList choices;
+    for (int i = 0; i < m_projectList->count(); ++i) {
+        const QString text = m_projectList->item(i)->text().trimmed();
+        if (!text.isEmpty() && text != QStringLiteral("全部项目")) {
+            choices.append(text);
+        }
+    }
+    choices.removeDuplicates();
+    choices.append(QStringLiteral("＋ 新建项目"));
+
+    bool ok = false;
+    const QString picked = QInputDialog::getItem(this,
+                                                 QStringLiteral("选择导入项目"),
+                                                 QStringLiteral("请先选择一个项目（或新建）："),
+                                                 choices,
+                                                 0,
+                                                 false,
+                                                 &ok);
+    if (!ok || picked.isEmpty()) {
+        updateStatus(QStringLiteral("已取消导入：未选择项目。"));
+        return false;
+    }
+
+    QString targetProject = picked;
+    if (picked == QStringLiteral("＋ 新建项目")) {
+        const QString name = QInputDialog::getText(this,
+                                                   QStringLiteral("新建项目"),
+                                                   QStringLiteral("项目名称："),
+                                                   QLineEdit::Normal,
+                                                   {},
+                                                   &ok)
+                                 .trimmed();
+        if (!ok || name.isEmpty()) {
+            updateStatus(QStringLiteral("已取消导入：未创建项目。"));
+            return false;
+        }
+        targetProject = name;
+
+        bool exists = false;
+        for (int i = 0; i < m_projectList->count(); ++i) {
+            if (m_projectList->item(i)->text() == targetProject) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            m_projectList->addItem(targetProject);
+        }
+    }
+
+    QList<QListWidgetItem *> matched = m_projectList->findItems(targetProject, Qt::MatchExactly);
+    if (!matched.isEmpty()) {
+        m_projectList->setCurrentItem(matched.first());
+    }
+
+    if (projectName) {
+        *projectName = targetProject;
+    }
+    return true;
+}
+
+bool MainWindow::importLichuangSpreadsheetFlow()
+{
+    QString projectName;
+    if (!ensureProjectForImport(&projectName)) {
+        return false;
+    }
+
+    const QString path = QFileDialog::getOpenFileName(this,
+                                                      QStringLiteral("选择立创导出文件"),
+                                                      QString(),
+                                                      QStringLiteral("Spreadsheet Files (*.xlsx *.xls *.csv);;All Files (*.*)"));
+    if (path.isEmpty()) {
+        updateStatus(QStringLiteral("已取消立创导入。"));
+        return false;
+    }
+
+    QString csvPath;
+    QString error;
+    if (path.endsWith(QStringLiteral(".csv"), Qt::CaseInsensitive)) {
+        csvPath = path;
+    } else if (!convertSpreadsheetToCsv(path, &csvPath, &error)) {
+        updateStatus(QStringLiteral("导入失败：%1").arg(error));
+        return false;
+    }
+
+    if (!loadLichuangCsvIntoBomTable(csvPath, projectName, &error)) {
+        updateStatus(QStringLiteral("导入失败：%1").arg(error));
+        return false;
+    }
+
+    applySearchHighlight(m_searchInput ? m_searchInput->text().trimmed() : QString());
+    updateStatus(QStringLiteral("已导入立创 BOM：%1，绑定项目：%2").arg(QFileInfo(path).fileName(), projectName));
+    return true;
+}
+
 bool MainWindow::importSpreadsheetFlow()
 {
     const QString path = QFileDialog::getOpenFileName(this,
@@ -671,9 +907,10 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
     const QFileInfo info(inputPath);
     const QString outPath = QDir(tempDir).filePath(QStringLiteral("%1_starbom.csv").arg(info.completeBaseName()));
 
-    if (info.suffix().compare(QStringLiteral("xlsx"), Qt::CaseInsensitive) == 0) {
+    if (info.suffix().compare(QStringLiteral("xlsx"), Qt::CaseInsensitive) == 0
+        || info.suffix().compare(QStringLiteral("xls"), Qt::CaseInsensitive) == 0) {
         QString pyError;
-        if (convertXlsxToCsvWithPython(inputPath, outPath, &pyError) && QFile::exists(outPath)) {
+        if (convertExcelToCsvWithPython(inputPath, outPath, &pyError) && QFile::exists(outPath)) {
             if (outputCsvPath) {
                 *outputCsvPath = outPath;
             }
@@ -694,13 +931,20 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
         return process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0;
     };
 
-    const bool libreofficeOk = runConverter(QStringLiteral("libreoffice"),
-                                            {QStringLiteral("--headless"),
-                                             QStringLiteral("--convert-to"),
-                                             QStringLiteral("csv"),
-                                             QStringLiteral("--outdir"),
-                                             QFileInfo(outPath).absolutePath(),
-                                             inputPath});
+    bool libreofficeOk = false;
+    const QStringList officeCandidates {QStringLiteral("libreoffice"), QStringLiteral("soffice")};
+    for (const QString &program : officeCandidates) {
+        libreofficeOk = runConverter(program,
+                                     {QStringLiteral("--headless"),
+                                      QStringLiteral("--convert-to"),
+                                      QStringLiteral("csv:Text - txt - csv (StarCalc):44,34,76,1"),
+                                      QStringLiteral("--outdir"),
+                                      QFileInfo(outPath).absolutePath(),
+                                      inputPath});
+        if (libreofficeOk) {
+            break;
+        }
+    }
 
     if (libreofficeOk) {
         const QString converted = QDir(QFileInfo(outPath).absolutePath())
@@ -722,8 +966,8 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
     }
 
     if (error) {
-        *error = QStringLiteral("导入失败：未检测到可用转换器（libreoffice/ssconvert），且内置 xlsx 解析不可用。\n"
-                                "建议：安装 libreoffice 或 ssconvert，或先另存为 CSV。\n文件：%1")
+        *error = QStringLiteral("导入失败：未检测到可用转换器（libreoffice/soffice/ssconvert），且内置 Excel 解析不可用。\n"
+                                "建议：安装 libreoffice（含 soffice 命令）或 ssconvert，或先另存为 CSV。\n文件：%1")
                      .arg(inputPath);
     }
     return false;
@@ -814,6 +1058,78 @@ with open(out_path, 'w', encoding='utf-8', newline='') as fp:
     return ok;
 }
 
+bool MainWindow::convertExcelToCsvWithPython(const QString &inputPath, const QString &outputPath, QString *error) const
+{
+    if (inputPath.endsWith(QStringLiteral(".xlsx"), Qt::CaseInsensitive)) {
+        return convertXlsxToCsvWithPython(inputPath, outputPath, error);
+    }
+
+    QString program = QStringLiteral("python3");
+    QProcess check;
+    check.start(program, {QStringLiteral("--version")});
+    if (!check.waitForStarted(2500)) {
+        program = QStringLiteral("python");
+    } else {
+        check.waitForFinished(2500);
+    }
+
+    const QString pythonCode = QStringLiteral(R"PY(
+import csv
+import sys
+
+in_path, out_path = sys.argv[1], sys.argv[2]
+
+try:
+    import xlrd
+except Exception as exc:
+    raise RuntimeError(f'缺少 xlrd 依赖，无法读取 .xls 文件: {exc}')
+
+book = xlrd.open_workbook(in_path)
+if book.nsheets <= 0:
+    raise RuntimeError('xls 中未找到工作表')
+
+sheet = book.sheet_by_index(0)
+rows = []
+for r in range(sheet.nrows):
+    line = []
+    for c in range(sheet.ncols):
+        cell = sheet.cell_value(r, c)
+        if isinstance(cell, float) and cell.is_integer():
+            line.append(str(int(cell)))
+        else:
+            line.append(str(cell))
+    rows.append(line)
+
+with open(out_path, 'w', encoding='utf-8', newline='') as fp:
+    writer = csv.writer(fp)
+    writer.writerows(rows)
+)PY");
+
+    QProcess process;
+    process.start(program, {QStringLiteral("-c"), pythonCode, inputPath, outputPath});
+    if (!process.waitForStarted(3000)) {
+        if (error) {
+            *error = QStringLiteral("未找到 python3/python，无法执行 .xls 解析。");
+        }
+        return false;
+    }
+
+    process.waitForFinished(20000);
+    const bool ok = process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0 && QFile::exists(outputPath);
+    if (!ok && error) {
+        const QString stderrMsg = QString::fromUtf8(process.readAllStandardError()).trimmed();
+        if (stderrMsg.contains(QStringLiteral("xlrd"), Qt::CaseInsensitive)) {
+            *error = QStringLiteral(".xls 导入失败：缺少 Python 包 xlrd。请执行 `python3 -m pip install xlrd` 后重试，或将文件另存为 .xlsx/.csv。\n%1")
+                         .arg(stderrMsg);
+        } else {
+            *error = stderrMsg.isEmpty() ? QStringLiteral(".xls 解析失败。")
+                                         : QStringLiteral(".xls 解析失败：%1").arg(stderrMsg);
+        }
+    }
+    return ok;
+}
+
+
 bool MainWindow::loadCsvIntoBomTable(const QString &csvPath, QString *error)
 {
     QFile file(csvPath);
@@ -869,7 +1185,108 @@ bool MainWindow::loadCsvIntoBomTable(const QString &csvPath, QString *error)
         }
     }
 
-    m_bomTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_bomTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    captureBomSourceFromCurrentTable();
+    refreshBomColumnSelectors();
+    applyBomColumnSelection();
+    return true;
+}
+
+bool MainWindow::loadLichuangCsvIntoBomTable(const QString &csvPath, const QString &projectName, QString *error)
+{
+    QFile file(csvPath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (error) {
+            *error = QStringLiteral("无法打开 CSV 文件：%1").arg(csvPath);
+        }
+        return false;
+    }
+
+    QTextStream in(&file);
+    in.setEncoding(QStringConverter::Utf8);
+
+    QList<QStringList> rows;
+    while (!in.atEnd()) {
+        rows.append(parseCsvLine(in.readLine()));
+    }
+
+    const auto normalized = [](QString v) {
+        return v.remove(' ').remove('	').trimmed();
+    };
+
+    int headerRow = -1;
+    for (int r = 0; r < rows.size(); ++r) {
+        const QString merged = normalized(rows[r].join(QString()));
+        if (merged.contains(QStringLiteral("商品编号"))
+            && merged.contains(QStringLiteral("厂家型号"))
+            && merged.contains(QStringLiteral("订购数量（修改后）"))
+            && merged.contains(QStringLiteral("商品金额"))) {
+            headerRow = r;
+            break;
+        }
+    }
+
+    if (headerRow < 0) {
+        if (error) {
+            *error = QStringLiteral("未识别到立创表头（应包含第18行字段）。");
+        }
+        return false;
+    }
+
+    QList<QStringList> dataRows;
+    for (int r = headerRow + 1; r < rows.size(); ++r) {
+        const QStringList row = rows[r];
+        const auto at = [&](int idx) { return idx < row.size() ? row[idx].trimmed() : QString(); };
+
+        const QString itemCode = at(1);
+        const QString brand = at(2);
+        const QString model = at(3);
+        const QString pkg = at(4);
+        const QString name = at(5);
+        const QString qty = at(6);
+        const QString unitPrice = at(9);
+        const QString amount = at(10);
+
+        const bool empty = itemCode.isEmpty() && brand.isEmpty() && model.isEmpty()
+                           && pkg.isEmpty() && name.isEmpty() && qty.isEmpty()
+                           && unitPrice.isEmpty() && amount.isEmpty();
+        if (empty) {
+            continue;
+        }
+
+        dataRows.append({projectName, itemCode, brand, model, pkg, name, qty, unitPrice, amount});
+    }
+
+    if (dataRows.isEmpty()) {
+        if (error) {
+            *error = QStringLiteral("立创导入未找到有效数据（应从第19行开始）。");
+        }
+        return false;
+    }
+
+    m_bomTable->clear();
+    m_bomTable->setColumnCount(9);
+    m_bomTable->setHorizontalHeaderLabels({QStringLiteral("项目"),
+                                           QStringLiteral("商品编号"),
+                                           QStringLiteral("品牌"),
+                                           QStringLiteral("厂家型号"),
+                                           QStringLiteral("封装"),
+                                           QStringLiteral("商品名称"),
+                                           QStringLiteral("订购数量（修改后）"),
+                                           QStringLiteral("商品单价"),
+                                           QStringLiteral("商品金额")});
+    m_bomTable->setRowCount(dataRows.size());
+
+    for (int r = 0; r < dataRows.size(); ++r) {
+        for (int c = 0; c < dataRows[r].size(); ++c) {
+            m_bomTable->setItem(r, c, new QTableWidgetItem(dataRows[r][c]));
+        }
+    }
+
+    m_bomTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    captureBomSourceFromCurrentTable();
+    refreshBomColumnSelectors();
+    applyBomColumnSelection();
     return true;
 }
 
