@@ -55,9 +55,15 @@ Rectangle {
         }
 
         RowLayout {
-
+            Image {
+                source: "qrc:/qt/qml/StarBOM/src/asset/Github.png"
+                width: 12
+                height: 12
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+            }
             Text {
-                text: "<span style='font-size:12px'>🐙</span> <a href='https://github.com/890mn/StarBOM'>890mn</a>"
+                text: "<a href='https://github.com/890mn/StarBOM'>890mn</a>"
                 textFormat: Text.RichText
                 onLinkActivated: Qt.openUrlExternally(link)
             }
