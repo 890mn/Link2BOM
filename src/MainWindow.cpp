@@ -64,8 +64,8 @@ void MainWindow::setupUi()
 
     auto *leftPanel = new QFrame();
     leftPanel->setObjectName(QStringLiteral("leftPanel"));
-    leftPanel->setMinimumWidth(420);
-    leftPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    leftPanel->setFixedWidth(340);
+    leftPanel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     auto *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setContentsMargins(14, 14, 14, 14);
     leftLayout->setSpacing(14);
@@ -80,9 +80,9 @@ void MainWindow::setupUi()
 
     splitter->addWidget(leftScroll);
     splitter->addWidget(rightPanel);
-    splitter->setStretchFactor(0, 2);
-    splitter->setStretchFactor(1, 8);
-    splitter->setSizes({qRound(width() * 0.22), qRound(width() * 0.78)});
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+    splitter->setSizes({340, qMax(900, width() - 340)});
 
     mainLayout->addWidget(splitter);
     setCentralWidget(m_centralWidget);
@@ -121,18 +121,13 @@ void MainWindow::setupLeftPanel()
     auto *importLayout = new QVBoxLayout(importGroup);
     importLayout->setSpacing(10);
 
-    m_quickImportInput = new QLineEdit(importGroup);
-    m_quickImportInput->setMinimumHeight(38);
-    m_quickImportInput->setPlaceholderText(QStringLiteral("立创导出内容关键字 / 链接（后续完善）"));
-
-    auto *quickImportBtn = new QPushButton(QStringLiteral("立创导入（规划中）"), importGroup);
+    auto *quickImportBtn = new QPushButton(QStringLiteral("立创导入（开发中）"), importGroup);
     auto *xlsImportBtn = new QPushButton(QStringLiteral("从 XLS/XLSX 导入"), importGroup);
     auto *ocrImportBtn = new QPushButton(QStringLiteral("OCR 图片导入（后续）"), importGroup);
     quickImportBtn->setMinimumHeight(40);
     xlsImportBtn->setMinimumHeight(42);
     ocrImportBtn->setMinimumHeight(40);
 
-    importLayout->addWidget(m_quickImportInput);
     importLayout->addWidget(quickImportBtn);
     importLayout->addWidget(xlsImportBtn);
     importLayout->addWidget(ocrImportBtn);
@@ -205,12 +200,7 @@ void MainWindow::setupLeftPanel()
     layout->addStretch();
 
     connect(quickImportBtn, &QPushButton::clicked, this, [this] {
-        const QString key = m_quickImportInput->text().trimmed();
-        if (key.isEmpty()) {
-            updateStatus(QStringLiteral("立创导入：请先输入关键字或链接。"));
-            return;
-        }
-        updateStatus(QStringLiteral("立创导入已就绪，目标项目：%1，输入：%2").arg(currentProjectText(), key));
+        updateStatus(QStringLiteral("立创导入入口保留中：目标项目 %1（即将接入自动抓取流程）。").arg(currentProjectText()));
     });
 
     connect(xlsImportBtn, &QPushButton::clicked, this, [this] {
@@ -539,11 +529,16 @@ void MainWindow::applyTheme(const QString &themeName)
             background: white;
             padding: 6px;
         }
+        QListWidget::item {
+            border-left: 2px solid transparent;
+            padding-left: 8px;
+        }
         QListWidget::item:selected {
-            background: rgba(46, 91, 255, 0.18);
+            background: rgba(%6, 0.18);
             border-radius: 4px;
             color: #0F172A;
             font-weight: 700;
+            border-left: 5px solid %3;
         }
         QHeaderView::section {
             background: %3;
@@ -555,7 +550,7 @@ void MainWindow::applyTheme(const QString &themeName)
             background: transparent;
         }
     )")
-                              .arg(panel, text, primary, secondary, accent);
+                              .arg(panel, text, primary, secondary, accent, QStringLiteral("%1, %2, %3").arg(QColor(primary).red()).arg(QColor(primary).green()).arg(QColor(primary).blue()));
 
     qApp->setStyleSheet(style);
 }
@@ -671,9 +666,10 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
     const QFileInfo info(inputPath);
     const QString outPath = QDir(tempDir).filePath(QStringLiteral("%1_starbom.csv").arg(info.completeBaseName()));
 
-    if (info.suffix().compare(QStringLiteral("xlsx"), Qt::CaseInsensitive) == 0) {
+    if (info.suffix().compare(QStringLiteral("xlsx"), Qt::CaseInsensitive) == 0
+        || info.suffix().compare(QStringLiteral("xls"), Qt::CaseInsensitive) == 0) {
         QString pyError;
-        if (convertXlsxToCsvWithPython(inputPath, outPath, &pyError) && QFile::exists(outPath)) {
+        if (convertExcelToCsvWithPython(inputPath, outPath, &pyError) && QFile::exists(outPath)) {
             if (outputCsvPath) {
                 *outputCsvPath = outPath;
             }
@@ -694,13 +690,20 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
         return process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0;
     };
 
-    const bool libreofficeOk = runConverter(QStringLiteral("libreoffice"),
-                                            {QStringLiteral("--headless"),
-                                             QStringLiteral("--convert-to"),
-                                             QStringLiteral("csv"),
-                                             QStringLiteral("--outdir"),
-                                             QFileInfo(outPath).absolutePath(),
-                                             inputPath});
+    bool libreofficeOk = false;
+    const QStringList officeCandidates {QStringLiteral("libreoffice"), QStringLiteral("soffice")};
+    for (const QString &program : officeCandidates) {
+        libreofficeOk = runConverter(program,
+                                     {QStringLiteral("--headless"),
+                                      QStringLiteral("--convert-to"),
+                                      QStringLiteral("csv:Text - txt - csv (StarCalc):44,34,76,1"),
+                                      QStringLiteral("--outdir"),
+                                      QFileInfo(outPath).absolutePath(),
+                                      inputPath});
+        if (libreofficeOk) {
+            break;
+        }
+    }
 
     if (libreofficeOk) {
         const QString converted = QDir(QFileInfo(outPath).absolutePath())
@@ -722,8 +725,8 @@ bool MainWindow::convertSpreadsheetToCsv(const QString &inputPath, QString *outp
     }
 
     if (error) {
-        *error = QStringLiteral("导入失败：未检测到可用转换器（libreoffice/ssconvert），且内置 xlsx 解析不可用。\n"
-                                "建议：安装 libreoffice 或 ssconvert，或先另存为 CSV。\n文件：%1")
+        *error = QStringLiteral("导入失败：未检测到可用转换器（libreoffice/soffice/ssconvert），且内置 Excel 解析不可用。\n"
+                                "建议：安装 libreoffice（含 soffice 命令）或 ssconvert，或先另存为 CSV。\n文件：%1")
                      .arg(inputPath);
     }
     return false;
@@ -813,6 +816,78 @@ with open(out_path, 'w', encoding='utf-8', newline='') as fp:
     }
     return ok;
 }
+
+bool MainWindow::convertExcelToCsvWithPython(const QString &inputPath, const QString &outputPath, QString *error) const
+{
+    if (inputPath.endsWith(QStringLiteral(".xlsx"), Qt::CaseInsensitive)) {
+        return convertXlsxToCsvWithPython(inputPath, outputPath, error);
+    }
+
+    QString program = QStringLiteral("python3");
+    QProcess check;
+    check.start(program, {QStringLiteral("--version")});
+    if (!check.waitForStarted(2500)) {
+        program = QStringLiteral("python");
+    } else {
+        check.waitForFinished(2500);
+    }
+
+    const QString pythonCode = QStringLiteral(R"PY(
+import csv
+import sys
+
+in_path, out_path = sys.argv[1], sys.argv[2]
+
+try:
+    import xlrd
+except Exception as exc:
+    raise RuntimeError(f'缺少 xlrd 依赖，无法读取 .xls 文件: {exc}')
+
+book = xlrd.open_workbook(in_path)
+if book.nsheets <= 0:
+    raise RuntimeError('xls 中未找到工作表')
+
+sheet = book.sheet_by_index(0)
+rows = []
+for r in range(sheet.nrows):
+    line = []
+    for c in range(sheet.ncols):
+        cell = sheet.cell_value(r, c)
+        if isinstance(cell, float) and cell.is_integer():
+            line.append(str(int(cell)))
+        else:
+            line.append(str(cell))
+    rows.append(line)
+
+with open(out_path, 'w', encoding='utf-8', newline='') as fp:
+    writer = csv.writer(fp)
+    writer.writerows(rows)
+)PY");
+
+    QProcess process;
+    process.start(program, {QStringLiteral("-c"), pythonCode, inputPath, outputPath});
+    if (!process.waitForStarted(3000)) {
+        if (error) {
+            *error = QStringLiteral("未找到 python3/python，无法执行 .xls 解析。");
+        }
+        return false;
+    }
+
+    process.waitForFinished(20000);
+    const bool ok = process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0 && QFile::exists(outputPath);
+    if (!ok && error) {
+        const QString stderrMsg = QString::fromUtf8(process.readAllStandardError()).trimmed();
+        if (stderrMsg.contains(QStringLiteral("xlrd"), Qt::CaseInsensitive)) {
+            *error = QStringLiteral(".xls 导入失败：缺少 Python 包 xlrd。请执行 `python3 -m pip install xlrd` 后重试，或将文件另存为 .xlsx/.csv。\n%1")
+                         .arg(stderrMsg);
+        } else {
+            *error = stderrMsg.isEmpty() ? QStringLiteral(".xls 解析失败。")
+                                         : QStringLiteral(".xls 解析失败：%1").arg(stderrMsg);
+        }
+    }
+    return ok;
+}
+
 
 bool MainWindow::loadCsvIntoBomTable(const QString &csvPath, QString *error)
 {
