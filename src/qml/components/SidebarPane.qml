@@ -29,40 +29,48 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            Label {
-                text: "StarBOM"
-                font.family: audioWide.name
-                font.pixelSize: 34
-                font.bold: true
-                color: themeColors.primary
-            }
-            Text {
-                text: app.theme.currentThemeName
-                font.pixelSize: 34
-                color: themeColors.primary
-                font.bold: true
+            spacing: 12
+            Image {
+                source: app.theme.currentThemeName === "Dark"
+                    ? "qrc:/qt/qml/StarBOM/src/asset/Github-dark.png"
+                    : "qrc:/qt/qml/StarBOM/src/asset/Github-light.png"
+                width: 34
+                height: 34
+                fillMode: Image.PreserveAspectFit
+                smooth: true
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: app.cycleTheme()
+                    onClicked: Qt.openUrlExternally("https://github.com/890mn/StarBOM")
                 }
             }
-        }
-
-        RowLayout {
-            Image {
-                source: "qrc:/qt/qml/StarBOM/src/asset/Github-dark.png"
-                width: 12
-                height: 12
-                fillMode: Image.PreserveAspectFit
-                smooth: true
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                Label {
+                    text: "StarBOM"
+                    font.family: audioWide.name
+                    font.pixelSize: 34
+                    font.bold: true
+                    color: themeColors.primary
+                }
+                Text {
+                    text: app.theme.currentThemeName
+                    font.pixelSize: 34
+                    color: themeColors.primary
+                    font.bold: true
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: app.cycleTheme()
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label { text: "890mn"; color: themeColors.muted; font.pixelSize: 12 }
+                    Label { text: "v0.0.4"; color: themeColors.muted; font.pixelSize: 12 }
+                }
             }
-            Text {
-                text: "<a href='https://github.com/890mn/StarBOM'>890mn</a>"
-                textFormat: Text.RichText
-                onLinkActivated: Qt.openUrlExternally(link)
-            }
-            Label { text: "v0.0.4"; color: themeColors.muted; font.pixelSize: 12 }
         }
 
         GroupBox {
