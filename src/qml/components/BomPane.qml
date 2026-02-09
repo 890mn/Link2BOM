@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -62,6 +63,8 @@ Item {
 
                 delegate: Rectangle {
                     id: headerCell
+                    required property int column
+                    required property string display
                     implicitHeight: 40
                     color: themeColors.subtle
                     border.color: themeColors.border
@@ -136,6 +139,8 @@ Item {
                 columnWidthProvider: function(column) { return root.slotWidth(column) }
 
                 delegate: Rectangle {
+                    required property int row
+                    required property string display
                     implicitHeight: 34
                     color: row % 2 === 0 ? themeColors.card : themeColors.subtle
                     border.color: themeColors.border

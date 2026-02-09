@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -9,23 +10,34 @@ ApplicationWindow {
     width: 1500
     height: 920
     visible: true
-    title: "StarBOM"
+    title: "Link2BOM"
 
     property var appCtx: app
     property string activeProjectForImport: ""
     property int renameProjectIndex: -1
     property int renameCategoryIndex: -1
 
-    property bool darkTheme: app.theme.currentThemeName === "Dark"
-    property color bgColor: darkTheme ? "#141622" : "#F3F7F6"
+    property bool darkTheme: root.appCtx.theme.currentThemeName === "Dark"
+    property color bgColor: darkTheme ? "#141622" : "#F8FAFC"
     property color cardColor: darkTheme ? "#1C2030" : "#FFFFFF"
-    property color borderColor: darkTheme ? "#2F3447" : "#CFE0E3"
+    property color borderColor: darkTheme ? "#2F3447" : "#D9E2EC"
     property color textColor: darkTheme ? "#E6E1E8" : "#0F172A"
     property color mutedTextColor: darkTheme ? "#9A8FA2" : "#5F6B73"
     property color primaryColor: darkTheme ? "#B08FA8" : "#C9778F"
-    property color subtleColor: darkTheme ? "#22283A" : "#E6F4F1"
+    property color subtleColor: darkTheme ? "#22283A" : "#F1F5F9"
 
     color: bgColor
+    palette.window: bgColor
+    palette.windowText: textColor
+    palette.base: cardColor
+    palette.alternateBase: subtleColor
+    palette.text: textColor
+    palette.button: subtleColor
+    palette.buttonText: textColor
+    palette.highlight: primaryColor
+    palette.highlightedText: darkTheme ? "#141622" : "#FFFFFF"
+    palette.placeholderText: mutedTextColor
+    palette.mid: borderColor
 
     Dialog {
         id: projectForImportDialog
@@ -40,7 +52,7 @@ ApplicationWindow {
             ComboBox {
                 id: projectCombo
                 Layout.fillWidth: true
-                model: app.projects.projectNames(false)
+                model: root.appCtx.projects.projectNames(false)
             }
             TextField {
                 id: newProjectField
@@ -52,10 +64,10 @@ ApplicationWindow {
         onAccepted: {
             const created = newProjectField.text.trim()
             if (created.length > 0) {
-                app.projects.addProject(created)
-                activeProjectForImport = created
+                root.appCtx.projects.addProject(created)
+                root.activeProjectForImport = created
             } else {
-                activeProjectForImport = projectCombo.currentText
+                root.activeProjectForImport = projectCombo.currentText
             }
             fileDialog.open()
             newProjectField.clear()
@@ -66,7 +78,7 @@ ApplicationWindow {
         id: fileDialog
         title: "选择立创导出文件"
         nameFilters: ["Spreadsheet Files (*.xlsx *.xls *.csv)", "All Files (*.*)"]
-        onAccepted: app.importLichuang(selectedFile, activeProjectForImport)
+        onAccepted: root.appCtx.importLichuang(selectedFile, root.activeProjectForImport)
     }
 
     Dialog {
@@ -82,10 +94,10 @@ ApplicationWindow {
 
         onAccepted: {
             const value = dialogInput.text.trim()
-            if (mode === "newProject") app.projects.addProject(value)
-            if (mode === "renameProject") app.projects.renameProject(renameProjectIndex, value)
-            if (mode === "newCategory") app.categories.addCategory(value)
-            if (mode === "renameCategory") app.categories.renameCategory(renameCategoryIndex, value)
+            if (mode === "newProject") root.appCtx.projects.addProject(value)
+            if (mode === "renameProject") root.appCtx.projects.renameProject(root.renameProjectIndex, value)
+            if (mode === "newCategory") root.appCtx.categories.addCategory(value)
+            if (mode === "renameCategory") root.appCtx.categories.renameCategory(root.renameCategoryIndex, value)
             dialogInput.clear()
         }
     }
@@ -118,7 +130,7 @@ ApplicationWindow {
                     app.notify("请先选择一个具体项目再重命名。")
                     return
                 }
-                renameProjectIndex = index
+                root.renameProjectIndex = index
                 inputDialog.title = "重命名项目"
                 inputDialog.mode = "renameProject"
                 dialogInput.text = currentName
@@ -134,7 +146,7 @@ ApplicationWindow {
                     app.notify("请先选择要修改的分类组。")
                     return
                 }
-                renameCategoryIndex = index
+                root.renameCategoryIndex = index
                 inputDialog.title = "修改分类组"
                 inputDialog.mode = "renameCategory"
                 dialogInput.text = currentName
@@ -186,14 +198,14 @@ ApplicationWindow {
                             placeholderText: "全文搜索（料号/位号/规格/备注）"
                             color: root.textColor
                             placeholderTextColor: root.mutedTextColor
-                            onTextChanged: app.bomModel.setFilterKeyword(text)
+                            onTextChanged: root.appCtx.bomModel.setFilterKeyword(text)
                         }
                     }
                     Button {
                         text: "清空"
                         onClicked: {
                             globalSearch.clear()
-                            app.bomModel.setFilterKeyword("")
+                            root.appCtx.bomModel.setFilterKeyword("")
                         }
                     }
                 }
@@ -231,7 +243,7 @@ ApplicationWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 34
+                    Layout.preferredHeight: 34
                     radius: 6
                     color: root.subtleColor
                     border.color: root.borderColor
@@ -239,7 +251,7 @@ ApplicationWindow {
                         anchors.fill: parent
                         anchors.leftMargin: 10
                         verticalAlignment: Text.AlignVCenter
-                        text: app.status
+                        text: root.appCtx.status
                         color: root.textColor
                     }
                 }

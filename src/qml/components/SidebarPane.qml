@@ -1,6 +1,8 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtCore
 
 Rectangle {
     id: root
@@ -12,206 +14,296 @@ Rectangle {
     signal requestNewCategory()
     signal requestRenameCategory(int index, string currentName)
     property string selectedCategoryName: ""
-    function primaryTint(alpha) {
-        return Qt.rgba(themeColors.primary.r, themeColors.primary.g, themeColors.primary.b, alpha)
-    }
 
     radius: 12
-    color: themeColors.card
-    border.color: themeColors.border
+    color: root.themeColors.card
+    border.color: root.themeColors.border
+
+    function primaryTint(alpha) {
+        return Qt.rgba(root.themeColors.primary.r, root.themeColors.primary.g, root.themeColors.primary.b, alpha)
+    }
 
     FontLoader {
         id: audioWide
-        source: "qrc:/qt/qml/StarBOM/src/asset/Audiowide-Regular.ttf"
+        source: "qrc:/qt/qml/Link2BOM/src/asset/Audiowide-Regular.ttf"
     }
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 14
-        spacing: 10
+    Settings {
+        id: sidebarSettings
+        category: "Sidebar"
+        property bool importCollapsed: false
+        property bool exportCollapsed: false
+        property bool projectsCollapsed: false
+        property bool categoriesCollapsed: false
+    }
+
+    Rectangle {
+        id: headerCard
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 12
+        height: 92
+        radius: 12
+        color: root.themeColors.card
+        border.color: root.themeColors.border
 
         RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
+            anchors.fill: parent
+            anchors.margins: 10
+            spacing: 10
+
             Image {
-                source: app.theme.currentThemeName === "Dark"
-                    ? "qrc:/qt/qml/StarBOM/src/asset/Github-dark.png"
-                    : "qrc:/qt/qml/StarBOM/src/asset/Github-light.png"
-                width: 34
-                height: 34
+                source: root.app.theme.currentThemeName === "Dark"
+                    ? "qrc:/qt/qml/Link2BOM/src/asset/Github-dark.png"
+                    : "qrc:/qt/qml/Link2BOM/src/asset/Github-light.png"
+                Layout.preferredWidth: 70
+                Layout.preferredHeight: 70
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Qt.openUrlExternally("https://github.com/890mn/StarBOM")
+                    onClicked: Qt.openUrlExternally("https://github.com/890mn/Link2BOM")
                 }
             }
+
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 4
+
                 Label {
-                    text: "StarBOM"
+                    text: "Link2BOM"
                     font.family: audioWide.name
-                    font.pixelSize: 34
+                    font.pixelSize: 28
                     font.bold: true
-                    color: themeColors.primary
+                    color: root.themeColors.primary
                 }
-                Text {
-                    text: app.theme.currentThemeName
-                    font.pixelSize: 34
-                    color: themeColors.primary
-                    font.bold: true
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: app.cycleTheme()
-                    }
-                }
+
                 RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: "890mn"; color: themeColors.muted; font.pixelSize: 12 }
-                    Label { text: "v0.0.4"; color: themeColors.muted; font.pixelSize: 12 }
-                }
-            }
-        }
+                    spacing: 8
 
-        Rectangle {
-            Layout.fillWidth: true
-            radius: 8
-            color: themeColors.subtle
-            border.color: themeColors.border
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
-                Label { text: "导入"; color: themeColors.text; font.bold: true }
-                Button { text: "立创导入（XLS）"; Layout.fillWidth: true; onClicked: root.requestImport() }
-                Button { text: "从 XLS/XLSX 导入"; Layout.fillWidth: true; onClicked: root.requestImport() }
-                Button { text: "OCR 图片导入（后续）"; Layout.fillWidth: true; onClicked: app.notify("OCR 导入：目标项目 " + app.projects.selectedProject + "（识别流程待接入）。") }
-            }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            radius: 8
-            color: themeColors.subtle
-            border.color: themeColors.border
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
-                Label { text: "导出"; color: themeColors.text; font.bold: true }
-                Button { text: "导出 CSV"; Layout.fillWidth: true; onClicked: app.notify("CSV 导出任务已触发：范围 " + app.projects.selectedProject) }
-            }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: 8
-            color: themeColors.subtle
-            border.color: themeColors.border
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
-                Label { text: "项目"; color: themeColors.text; font.bold: true }
-                ListView {
-                    id: projectList
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 180
-                    clip: true
-                    model: app.projects.model
-                    currentIndex: Math.max(0, app.projects.projectNames(true).indexOf(app.projects.selectedProject))
-                    delegate: ItemDelegate {
-                        width: ListView.view.width
-                        text: (model.display !== undefined) ? model.display : ""
-                        leftPadding: 14
-                        contentItem: Text {
-                            text: parent.text
-                            color: themeColors.text
-                            verticalAlignment: Text.AlignVCenter
-                            elide: Text.ElideRight
+                    Rectangle {
+                        Layout.preferredWidth: 14
+                        Layout.preferredHeight: 14
+                        radius: 7
+                        color: root.app.theme.currentThemeName === "Light" ? root.themeColors.primary : "transparent"
+                        border.color: root.themeColors.primary
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.app.theme.currentIndex = 0
                         }
-                        background: Rectangle {
-                            color: app.projects.selectedProject === parent.text ? root.primaryTint(0.14) : "transparent"
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: app.projects.selectedProject === parent.text ? 5 : 2
-                                height: parent.height * 0.72
-                                radius: 2
-                                color: app.projects.selectedProject === parent.text ? themeColors.primary : "transparent"
-                            }
-                        }
-                        onClicked: app.projects.selectedProject = text
                     }
+
+                    Rectangle {
+                        Layout.preferredWidth: 14
+                        Layout.preferredHeight: 14
+                        radius: 7
+                        color: root.app.theme.currentThemeName === "Dark" ? root.themeColors.primary : "transparent"
+                        border.color: root.themeColors.primary
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.app.theme.currentIndex = 1
+                        }
+                    }
+
+                    Label { text: "890mn"; color: root.themeColors.muted; font.pixelSize: 12 }
+                    Label { text: "v0.0.4"; color: root.themeColors.muted; font.pixelSize: 12 }
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Button { text: "新建"; Layout.fillWidth: true; onClicked: root.requestNewProject() }
+            }
+        }
+    }
+
+    Flickable {
+        id: modulesFlick
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: headerCard.bottom
+        anchors.bottom: parent.bottom
+        anchors.margins: 12
+        anchors.topMargin: 8
+        clip: true
+        contentWidth: width
+        contentHeight: modulesColumn.childrenRect.height + 12
+        boundsBehavior: Flickable.StopAtBounds
+
+        Column {
+            id: modulesColumn
+            width: parent.width
+            spacing: 10
+
+            SidebarModuleCard {
+                width: modulesColumn.width
+                title: "导入"
+                themeColors: root.themeColors
+                collapsed: sidebarSettings.importCollapsed
+                normalHeight: 156
+                onCollapsedChanged: sidebarSettings.importCollapsed = collapsed
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
+                    Button { text: "立创导入（XLS）"; Layout.fillWidth: true; onClicked: root.requestImport() }
+                    Button { text: "从 XLS/XLSX 导入"; Layout.fillWidth: true; onClicked: root.requestImport() }
                     Button {
-                        text: "重命名"
+                        text: "OCR 图片导入（后续）"
                         Layout.fillWidth: true
-                        onClicked: root.requestRenameProject(projectList.currentIndex, app.projects.selectedProject)
+                        onClicked: root.app.notify("OCR 导入：目标项目 " + root.app.projects.selectedProject + "（识别流程待接入）")
                     }
-                    Button { text: "取消选中"; Layout.fillWidth: true; onClicked: app.projects.clearSelection() }
                 }
             }
-        }
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 220
-            radius: 8
-            color: themeColors.subtle
-            border.color: themeColors.border
+            SidebarModuleCard {
+                width: modulesColumn.width
+                title: "导出"
+                themeColors: root.themeColors
+                collapsed: sidebarSettings.exportCollapsed
+                normalHeight: 92
+                onCollapsedChanged: sidebarSettings.exportCollapsed = collapsed
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 8
-                Label { text: "分类组"; color: themeColors.text; font.bold: true }
-                ListView {
-                    id: categoryList
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    model: app.categories.model
-                    delegate: ItemDelegate {
-                        width: ListView.view.width
-                        text: (model.display !== undefined) ? model.display : ""
-                        contentItem: Text {
-                            text: parent.text
-                            color: themeColors.text
-                            verticalAlignment: Text.AlignVCenter
-                            elide: Text.ElideRight
-                        }
-                        background: Rectangle {
-                            color: categoryList.currentIndex === index ? root.primaryTint(0.14) : "transparent"
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: categoryList.currentIndex === index ? 5 : 2
-                                height: parent.height * 0.72
-                                radius: 2
-                                color: categoryList.currentIndex === index ? themeColors.primary : "transparent"
-                            }
-                        }
-                        onClicked: {
-                            categoryList.currentIndex = index
-                            root.selectedCategoryName = text
-                        }
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
+                    Button {
+                        text: "导出 CSV"
+                        Layout.fillWidth: true
+                        onClicked: root.app.notify("CSV 导出任务已触发：范围 " + root.app.projects.selectedProject)
                     }
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Button { text: "新增"; Layout.fillWidth: true; onClicked: root.requestNewCategory() }
-                    Button { text: "修改"; Layout.fillWidth: true; onClicked: root.requestRenameCategory(categoryList.currentIndex, root.selectedCategoryName) }
+            }
+
+            SidebarModuleCard {
+                width: modulesColumn.width
+                title: "项目"
+                themeColors: root.themeColors
+                collapsed: sidebarSettings.projectsCollapsed
+                normalHeight: 280
+                onCollapsedChanged: sidebarSettings.projectsCollapsed = collapsed
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
+
+                    ListView {
+                        id: projectList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        model: root.app.projects.model
+                        currentIndex: Math.max(0, root.app.projects.projectNames(true).indexOf(root.app.projects.selectedProject))
+
+                        delegate: ItemDelegate {
+                            id: projectDelegate
+                            required property int index
+                            width: ListView.view.width
+                            text: root.app.projects.model.data(
+                                      root.app.projects.model.index(projectDelegate.index, 0),
+                                      Qt.DisplayRole
+                                  ) ?? ""
+                            leftPadding: 14
+
+                            contentItem: Text {
+                                text: projectDelegate.text
+                                color: root.themeColors.text
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+
+                            background: Rectangle {
+                                color: root.app.projects.selectedProject === projectDelegate.text ? root.primaryTint(0.14) : "transparent"
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: root.app.projects.selectedProject === projectDelegate.text ? 5 : 2
+                                    height: parent.height * 0.72
+                                    radius: 2
+                                    color: root.app.projects.selectedProject === projectDelegate.text ? root.themeColors.primary : "transparent"
+                                }
+                            }
+
+                            onClicked: root.app.projects.selectedProject = text
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Button { text: "新建"; Layout.fillWidth: true; onClicked: root.requestNewProject() }
+                        Button {
+                            text: "重命名"
+                            Layout.fillWidth: true
+                            onClicked: root.requestRenameProject(projectList.currentIndex, root.app.projects.selectedProject)
+                        }
+                        Button { text: "取消选中"; Layout.fillWidth: true; onClicked: root.app.projects.clearSelection() }
+                    }
                 }
+            }
+
+            SidebarModuleCard {
+                width: modulesColumn.width
+                title: "分类组"
+                themeColors: root.themeColors
+                collapsed: sidebarSettings.categoriesCollapsed
+                normalHeight: 220
+                onCollapsedChanged: sidebarSettings.categoriesCollapsed = collapsed
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
+
+                    ListView {
+                        id: categoryList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        model: root.app.categories.model
+
+                        delegate: ItemDelegate {
+                            id: categoryDelegate
+                            required property int index
+                            width: ListView.view.width
+                            text: root.app.categories.model.data(
+                                      root.app.categories.model.index(categoryDelegate.index, 0),
+                                      Qt.DisplayRole
+                                  ) ?? ""
+
+                            contentItem: Text {
+                                text: categoryDelegate.text
+                                color: root.themeColors.text
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+
+                            background: Rectangle {
+                                color: categoryList.currentIndex === categoryDelegate.index ? root.primaryTint(0.14) : "transparent"
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: categoryList.currentIndex === categoryDelegate.index ? 5 : 2
+                                    height: parent.height * 0.72
+                                    radius: 2
+                                    color: categoryList.currentIndex === categoryDelegate.index ? root.themeColors.primary : "transparent"
+                                }
+                            }
+
+                            onClicked: {
+                                categoryList.currentIndex = categoryDelegate.index
+                                root.selectedCategoryName = text
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Button { text: "新增"; Layout.fillWidth: true; onClicked: root.requestNewCategory() }
+                        Button { text: "修改"; Layout.fillWidth: true; onClicked: root.requestRenameCategory(categoryList.currentIndex, root.selectedCategoryName) }
+                    }
+                }
+            }
+
+            Item {
+                width: 1
+                height: 12
             }
         }
     }

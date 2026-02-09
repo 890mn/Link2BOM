@@ -24,6 +24,9 @@ signals:
     void currentIndexChanged();
 
 private:
+    void loadSettings();
+    void saveSettings() const;
+
     QStringList m_themes;
     int m_currentIndex = 0;
 };

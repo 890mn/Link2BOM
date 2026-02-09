@@ -1,9 +1,12 @@
 #include "ThemeController.h"
 
+#include <QSettings>
+
 ThemeController::ThemeController(QObject *parent)
     : QObject(parent)
     , m_themes({QStringLiteral("Light"), QStringLiteral("Dark")})
 {
+    loadSettings();
 }
 
 QStringList ThemeController::themes() const
@@ -27,6 +30,7 @@ void ThemeController::setCurrentIndex(int index)
     }
     m_currentIndex = normalized;
     emit currentIndexChanged();
+    saveSettings();
 }
 
 QString ThemeController::currentThemeName() const
@@ -40,4 +44,17 @@ QString ThemeController::currentThemeName() const
 void ThemeController::cycleTheme()
 {
     setCurrentIndex(m_currentIndex + 1);
+}
+
+void ThemeController::loadSettings()
+{
+    QSettings settings;
+    const QString value = settings.value(QStringLiteral("theme/name"), QStringLiteral("Light")).toString();
+    m_currentIndex = (value.compare(QStringLiteral("Dark"), Qt::CaseInsensitive) == 0) ? 1 : 0;
+}
+
+void ThemeController::saveSettings() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("theme/name"), currentThemeName());
 }
