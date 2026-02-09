@@ -12,6 +12,9 @@ Rectangle {
     signal requestNewCategory()
     signal requestRenameCategory(int index, string currentName)
     property string selectedCategoryName: ""
+    function primaryTint(alpha) {
+        return Qt.rgba(themeColors.primary.r, themeColors.primary.g, themeColors.primary.b, alpha)
+    }
 
     radius: 12
     color: themeColors.card
@@ -76,6 +79,16 @@ Rectangle {
         GroupBox {
             title: "导入"
             Layout.fillWidth: true
+            label: Label {
+                text: parent.title
+                color: themeColors.text
+                font.bold: true
+            }
+            background: Rectangle {
+                radius: 8
+                color: themeColors.subtle
+                border.color: themeColors.border
+            }
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 8
@@ -88,6 +101,16 @@ Rectangle {
         GroupBox {
             title: "导出"
             Layout.fillWidth: true
+            label: Label {
+                text: parent.title
+                color: themeColors.text
+                font.bold: true
+            }
+            background: Rectangle {
+                radius: 8
+                color: themeColors.subtle
+                border.color: themeColors.border
+            }
             ColumnLayout {
                 anchors.fill: parent
                 Button { text: "导出 CSV"; Layout.fillWidth: true; onClicked: app.notify("CSV 导出任务已触发：范围 " + app.projects.selectedProject) }
@@ -98,6 +121,16 @@ Rectangle {
             title: "项目"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            label: Label {
+                text: parent.title
+                color: themeColors.text
+                font.bold: true
+            }
+            background: Rectangle {
+                radius: 8
+                color: themeColors.subtle
+                border.color: themeColors.border
+            }
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 8
@@ -112,8 +145,14 @@ Rectangle {
                         width: ListView.view.width
                         text: (model.display !== undefined) ? model.display : ""
                         leftPadding: 14
+                        contentItem: Text {
+                            text: parent.text
+                            color: themeColors.text
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
                         background: Rectangle {
-                            color: app.projects.selectedProject === parent.text ? Qt.rgba(46/255, 91/255, 1, 0.12) : "transparent"
+                            color: app.projects.selectedProject === parent.text ? root.primaryTint(0.14) : "transparent"
                             Rectangle {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
@@ -143,6 +182,16 @@ Rectangle {
             title: "分类组"
             Layout.fillWidth: true
             Layout.preferredHeight: 220
+            label: Label {
+                text: parent.title
+                color: themeColors.text
+                font.bold: true
+            }
+            background: Rectangle {
+                radius: 8
+                color: themeColors.subtle
+                border.color: themeColors.border
+            }
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 8
@@ -154,6 +203,23 @@ Rectangle {
                     delegate: ItemDelegate {
                         width: ListView.view.width
                         text: (model.display !== undefined) ? model.display : ""
+                        contentItem: Text {
+                            text: parent.text
+                            color: themeColors.text
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+                        background: Rectangle {
+                            color: categoryList.currentIndex === index ? root.primaryTint(0.14) : "transparent"
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: categoryList.currentIndex === index ? 5 : 2
+                                height: parent.height * 0.72
+                                radius: 2
+                                color: categoryList.currentIndex === index ? themeColors.primary : "transparent"
+                            }
+                        }
                         onClicked: {
                             categoryList.currentIndex = index
                             root.selectedCategoryName = text
