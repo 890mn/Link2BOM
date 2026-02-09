@@ -51,14 +51,15 @@ Rectangle {
         RowLayout {
             anchors.fill: parent
             anchors.margins: 10
-            spacing: 10
+            anchors.topMargin: 4
+            anchors.leftMargin: 10
 
             Image {
                 source: root.app.theme.currentThemeName === "Dark"
                     ? "qrc:/qt/qml/Link2BOM/src/asset/Github-dark.png"
                     : "qrc:/qt/qml/Link2BOM/src/asset/Github-light.png"
-                Layout.preferredWidth: 70
-                Layout.preferredHeight: 70
+                Layout.preferredWidth: 85
+                Layout.preferredHeight: 85
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 MouseArea {
@@ -71,6 +72,7 @@ Rectangle {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 4
+                Layout.topMargin: -8
 
                 Label {
                     text: "Link2BOM"

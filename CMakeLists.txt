@@ -35,6 +35,7 @@ qt_add_qml_module(Link2BOM
         src/asset/Audiowide-Regular.ttf
         src/asset/Github-dark.png
         src/asset/Github-light.png
+        src/asset/icon_100.png
 )
 
 target_link_libraries(Link2BOM PRIVATE Qt6::Quick Qt6::QuickControls2)
