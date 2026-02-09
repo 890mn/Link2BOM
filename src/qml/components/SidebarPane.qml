@@ -12,6 +12,9 @@ Rectangle {
     signal requestNewCategory()
     signal requestRenameCategory(int index, string currentName)
     property string selectedCategoryName: ""
+    function primaryTint(alpha) {
+        return Qt.rgba(themeColors.primary.r, themeColors.primary.g, themeColors.primary.b, alpha)
+    }
 
     radius: 12
     color: themeColors.card
@@ -73,34 +76,50 @@ Rectangle {
             }
         }
 
-        GroupBox {
-            title: "导入"
+        Rectangle {
             Layout.fillWidth: true
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
                 spacing: 8
+                Label { text: "导入"; color: themeColors.text; font.bold: true }
                 Button { text: "立创导入（XLS）"; Layout.fillWidth: true; onClicked: root.requestImport() }
                 Button { text: "从 XLS/XLSX 导入"; Layout.fillWidth: true; onClicked: root.requestImport() }
                 Button { text: "OCR 图片导入（后续）"; Layout.fillWidth: true; onClicked: app.notify("OCR 导入：目标项目 " + app.projects.selectedProject + "（识别流程待接入）。") }
             }
         }
 
-        GroupBox {
-            title: "导出"
+        Rectangle {
             Layout.fillWidth: true
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
+                spacing: 8
+                Label { text: "导出"; color: themeColors.text; font.bold: true }
                 Button { text: "导出 CSV"; Layout.fillWidth: true; onClicked: app.notify("CSV 导出任务已触发：范围 " + app.projects.selectedProject) }
             }
         }
 
-        GroupBox {
-            title: "项目"
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
                 spacing: 8
+                Label { text: "项目"; color: themeColors.text; font.bold: true }
                 ListView {
                     id: projectList
                     Layout.fillWidth: true
@@ -112,8 +131,14 @@ Rectangle {
                         width: ListView.view.width
                         text: (model.display !== undefined) ? model.display : ""
                         leftPadding: 14
+                        contentItem: Text {
+                            text: parent.text
+                            color: themeColors.text
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
                         background: Rectangle {
-                            color: app.projects.selectedProject === parent.text ? Qt.rgba(46/255, 91/255, 1, 0.12) : "transparent"
+                            color: app.projects.selectedProject === parent.text ? root.primaryTint(0.14) : "transparent"
                             Rectangle {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
@@ -139,13 +164,18 @@ Rectangle {
             }
         }
 
-        GroupBox {
-            title: "分类组"
+        Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 220
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
                 spacing: 8
+                Label { text: "分类组"; color: themeColors.text; font.bold: true }
                 ListView {
                     id: categoryList
                     Layout.fillWidth: true
@@ -154,6 +184,23 @@ Rectangle {
                     delegate: ItemDelegate {
                         width: ListView.view.width
                         text: (model.display !== undefined) ? model.display : ""
+                        contentItem: Text {
+                            text: parent.text
+                            color: themeColors.text
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+                        background: Rectangle {
+                            color: categoryList.currentIndex === index ? root.primaryTint(0.14) : "transparent"
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: categoryList.currentIndex === index ? 5 : 2
+                                height: parent.height * 0.72
+                                radius: 2
+                                color: categoryList.currentIndex === index ? themeColors.primary : "transparent"
+                            }
+                        }
                         onClicked: {
                             categoryList.currentIndex = index
                             root.selectedCategoryName = text

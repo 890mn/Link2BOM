@@ -17,13 +17,13 @@ ApplicationWindow {
     property int renameCategoryIndex: -1
 
     property bool darkTheme: app.theme.currentThemeName === "Dark"
-    property color bgColor: darkTheme ? "#111827" : "#F5F7FB"
-    property color cardColor: darkTheme ? "#1F2937" : "#FFFFFF"
-    property color borderColor: darkTheme ? "#374151" : "#D8E0EA"
-    property color textColor: darkTheme ? "#E5E7EB" : "#0F172A"
-    property color mutedTextColor: darkTheme ? "#9CA3AF" : "#64748B"
-    property color primaryColor: darkTheme ? "#60A5FA" : "#2E5BFF"
-    property color subtleColor: darkTheme ? "#273449" : "#F8FAFC"
+    property color bgColor: darkTheme ? "#141622" : "#F3F7F6"
+    property color cardColor: darkTheme ? "#1C2030" : "#FFFFFF"
+    property color borderColor: darkTheme ? "#2F3447" : "#CFE0E3"
+    property color textColor: darkTheme ? "#E6E1E8" : "#0F172A"
+    property color mutedTextColor: darkTheme ? "#9A8FA2" : "#5F6B73"
+    property color primaryColor: darkTheme ? "#B08FA8" : "#C9778F"
+    property color subtleColor: darkTheme ? "#22283A" : "#E6F4F1"
 
     color: bgColor
 
