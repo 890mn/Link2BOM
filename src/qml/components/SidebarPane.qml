@@ -76,64 +76,50 @@ Rectangle {
             }
         }
 
-        GroupBox {
-            title: "导入"
+        Rectangle {
             Layout.fillWidth: true
-            label: Label {
-                text: parent.title
-                color: themeColors.text
-                font.bold: true
-            }
-            background: Rectangle {
-                radius: 8
-                color: themeColors.subtle
-                border.color: themeColors.border
-            }
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
                 spacing: 8
+                Label { text: "导入"; color: themeColors.text; font.bold: true }
                 Button { text: "立创导入（XLS）"; Layout.fillWidth: true; onClicked: root.requestImport() }
                 Button { text: "从 XLS/XLSX 导入"; Layout.fillWidth: true; onClicked: root.requestImport() }
                 Button { text: "OCR 图片导入（后续）"; Layout.fillWidth: true; onClicked: app.notify("OCR 导入：目标项目 " + app.projects.selectedProject + "（识别流程待接入）。") }
             }
         }
 
-        GroupBox {
-            title: "导出"
+        Rectangle {
             Layout.fillWidth: true
-            label: Label {
-                text: parent.title
-                color: themeColors.text
-                font.bold: true
-            }
-            background: Rectangle {
-                radius: 8
-                color: themeColors.subtle
-                border.color: themeColors.border
-            }
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
+                spacing: 8
+                Label { text: "导出"; color: themeColors.text; font.bold: true }
                 Button { text: "导出 CSV"; Layout.fillWidth: true; onClicked: app.notify("CSV 导出任务已触发：范围 " + app.projects.selectedProject) }
             }
         }
 
-        GroupBox {
-            title: "项目"
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            label: Label {
-                text: parent.title
-                color: themeColors.text
-                font.bold: true
-            }
-            background: Rectangle {
-                radius: 8
-                color: themeColors.subtle
-                border.color: themeColors.border
-            }
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
                 spacing: 8
+                Label { text: "项目"; color: themeColors.text; font.bold: true }
                 ListView {
                     id: projectList
                     Layout.fillWidth: true
@@ -178,23 +164,18 @@ Rectangle {
             }
         }
 
-        GroupBox {
-            title: "分类组"
+        Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 220
-            label: Label {
-                text: parent.title
-                color: themeColors.text
-                font.bold: true
-            }
-            background: Rectangle {
-                radius: 8
-                color: themeColors.subtle
-                border.color: themeColors.border
-            }
+            radius: 8
+            color: themeColors.subtle
+            border.color: themeColors.border
+
             ColumnLayout {
                 anchors.fill: parent
+                anchors.margins: 10
                 spacing: 8
+                Label { text: "分类组"; color: themeColors.text; font.bold: true }
                 ListView {
                     id: categoryList
                     Layout.fillWidth: true
