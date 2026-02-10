@@ -25,7 +25,7 @@ Rectangle {
 
     FontLoader {
         id: audioWide
-        source: "qrc:/qt/qml/Link2BOM/src/asset/Audiowide-Regular.ttf"
+        source: "qrc:/qt/qml/Link2BOM/assets/Audiowide-Regular.ttf"
     }
 
     Settings {
@@ -56,8 +56,8 @@ Rectangle {
 
             Image {
                 source: root.app.theme.currentThemeName === "Dark"
-                    ? "qrc:/qt/qml/Link2BOM/src/asset/Github-dark.png"
-                    : "qrc:/qt/qml/Link2BOM/src/asset/Github-light.png"
+                    ? "qrc:/qt/qml/Link2BOM/assets/Github-dark.png"
+                    : "qrc:/qt/qml/Link2BOM/assets/Github-light.png"
                 Layout.preferredWidth: 85
                 Layout.preferredHeight: 85
                 fillMode: Image.PreserveAspectFit
