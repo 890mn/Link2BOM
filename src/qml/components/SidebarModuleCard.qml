@@ -1,4 +1,4 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -15,12 +15,14 @@ Rectangle {
     signal dragging(real globalY)
     signal endDrag()
 
+    property real expandedHeight: Math.max(normalHeight, headerBar.implicitHeight + contentHost.childrenRect.height + 20)
+
     radius: 10
-    color: themeColors.subtle
-    border.color: themeColors.border
+    color: root.themeColors.subtle
+    border.color: root.themeColors.border
     implicitWidth: 300
-    implicitHeight: collapsed ? minModuleHeight : normalHeight
-    height: collapsed ? minModuleHeight : normalHeight
+    implicitHeight: root.collapsed ? minModuleHeight : expandedHeight
+    height: root.collapsed ? minModuleHeight : expandedHeight
 
     Rectangle {
         id: headerBar
@@ -28,7 +30,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: 8
-        height: 30
+        implicitHeight: 30
         radius: 6
         color: "transparent"
 
@@ -43,11 +45,9 @@ Rectangle {
                 Layout.fillWidth: true
             }
 
-            ToolButton {
-                text: root.collapsed ? "▸" : "▾"
-                font.pixelSize: 13
-                implicitWidth: 28
-                implicitHeight: 24
+            AppToolButton {
+                themeColors: root.themeColors
+                text: root.collapsed ? ">" : "v"
                 onClicked: root.collapsed = !root.collapsed
             }
         }

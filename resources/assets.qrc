@@ -1,0 +1,9 @@
+﻿<RCC>
+    <qresource prefix="/">
+        <file alias="assets/app.ico">../assets/app.ico</file>
+        <file alias="assets/Audiowide-Regular.ttf">../assets/Audiowide-Regular.ttf</file>
+        <file alias="assets/Github-dark.png">../assets/Github-dark.png</file>
+        <file alias="assets/Github-light.png">../assets/Github-light.png</file>
+        <file alias="assets/icon_100.png">../assets/icon_100.png</file>
+    </qresource>
+</RCC>

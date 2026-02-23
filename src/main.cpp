@@ -5,6 +5,7 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QWindow>
+#include <QVariant>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("app"), &controller);
+    engine.setInitialProperties({{QStringLiteral("appCtx"), QVariant::fromValue(&controller)}});
     engine.loadFromModule(QStringLiteral("Link2BOM"), QStringLiteral("Main"));
     if (engine.rootObjects().isEmpty()) {
         return -1;
@@ -78,3 +80,6 @@ int main(int argc, char *argv[])
 
     return app.exec();
 }
+
+
+

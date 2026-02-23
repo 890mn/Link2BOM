@@ -1,4 +1,4 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -46,8 +46,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 8
-        color: themeColors.card
-        border.color: themeColors.border
+        color: root.themeColors.card
+        border.color: root.themeColors.border
 
         ColumnLayout {
             anchors.fill: parent
@@ -66,8 +66,8 @@ Item {
                     required property int column
                     required property string display
                     implicitHeight: 40
-                    color: themeColors.subtle
-                    border.color: themeColors.border
+                    color: root.themeColors.subtle
+                    border.color: root.themeColors.border
 
                     property real dragStartX: 0
                     property real dragStartWidth: 0
@@ -78,26 +78,26 @@ Item {
                         anchors.rightMargin: 10
                         spacing: 4
 
-                        ToolButton {
-                            text: "⇄"
-                            font.pixelSize: 14
-                            onClicked: root.cycleHeader(column)
+                        AppToolButton {
+                            themeColors: root.themeColors
+                            text: "R"
+                            onClicked: root.cycleHeader(headerCell.column)
                         }
 
                         Label {
                             Layout.fillWidth: true
-                            text: display
-                            color: themeColors.text
+                            text: headerCell.display
+                            color: root.themeColors.text
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
                             font.bold: true
                         }
 
-                        ToolButton {
-                            text: root.slotAscending[column] ? "↑" : "↓"
-                            font.pixelSize: 14
-                            onClicked: root.toggleSort(column)
+                        AppToolButton {
+                            themeColors: root.themeColors
+                            text: root.slotAscending[headerCell.column] ? "^" : "v"
+                            onClicked: root.toggleSort(headerCell.column)
                         }
                     }
 
@@ -114,12 +114,12 @@ Item {
                             cursorShape: Qt.SizeHorCursor
                             onPressed: function(mouse) {
                                 headerCell.dragStartX = mouse.x
-                                headerCell.dragStartWidth = root.slotWidth(column)
+                                headerCell.dragStartWidth = root.slotWidth(headerCell.column)
                             }
                             onPositionChanged: function(mouse) {
                                 if (pressed) {
                                     const delta = mouse.x - headerCell.dragStartX
-                                    root.setSlotWidth(column, headerCell.dragStartWidth + delta)
+                                    root.setSlotWidth(headerCell.column, headerCell.dragStartWidth + delta)
                                 }
                             }
                         }
@@ -139,18 +139,20 @@ Item {
                 columnWidthProvider: function(column) { return root.slotWidth(column) }
 
                 delegate: Rectangle {
+                    id: cell
                     required property int row
                     required property string display
                     implicitHeight: 34
-                    color: row % 2 === 0 ? themeColors.card : themeColors.subtle
-                    border.color: themeColors.border
+                    color: cell.row % 2 === 0 ? root.themeColors.card : root.themeColors.subtle
+                    border.color: root.themeColors.border
+
                     Text {
                         anchors.fill: parent
                         anchors.margins: 8
                         verticalAlignment: Text.AlignVCenter
                         elide: Text.ElideRight
-                        text: display === undefined ? "" : display
-                        color: themeColors.text
+                        text: cell.display === undefined ? "" : cell.display
+                        color: root.themeColors.text
                     }
                 }
             }

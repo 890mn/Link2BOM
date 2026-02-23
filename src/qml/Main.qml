@@ -14,7 +14,7 @@ ApplicationWindow {
     minimumWidth: 1100
     minimumHeight: 700
 
-    property var appCtx: app
+    required property var appCtx
     property string activeProjectForImport: ""
     property int renameProjectIndex: -1
     property int renameCategoryIndex: -1
@@ -129,7 +129,7 @@ ApplicationWindow {
             }
             onRequestRenameProject: function(index, currentName) {
                 if (index <= 0 || currentName === "全部项目") {
-                    app.notify("请先选择一个具体项目再重命名。")
+                    root.appCtx.notify("请先选择一个具体项目再重命名。")
                     return
                 }
                 root.renameProjectIndex = index
@@ -145,7 +145,7 @@ ApplicationWindow {
             }
             onRequestRenameCategory: function(index, currentName) {
                 if (index < 0) {
-                    app.notify("请先选择要修改的分类组。")
+                    root.appCtx.notify("请先选择要修改的分类组。")
                     return
                 }
                 root.renameCategoryIndex = index
@@ -170,41 +170,97 @@ ApplicationWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 8
+
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 42
-                        radius: 8
+                        radius: 10
                         color: root.subtleColor
                         border.color: root.borderColor
 
                         TabBar {
                             id: tabs
                             anchors.fill: parent
-                            anchors.margins: 2
-                            TabButton { text: "BOM 视图" }
-                            TabButton { text: "差异分析" }
+                            anchors.margins: 3
+                            spacing: 6
+                            background: Rectangle {
+                                radius: 8
+                                color: "transparent"
+                            }
+
+                            TabButton {
+                                text: "BOM 视图"
+                                implicitHeight: 34
+                                background: Rectangle {
+                                    radius: 8
+                                    color: tabs.currentIndex === 0 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
+                                    border.color: tabs.currentIndex === 0 ? root.primaryColor : root.borderColor
+                                }
+                                contentItem: Text {
+                                    text: "BOM 视图"
+                                    color: root.textColor
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.bold: tabs.currentIndex === 0
+                                }
+                            }
+
+                            TabButton {
+                                text: "差异分析"
+                                implicitHeight: 34
+                                background: Rectangle {
+                                    radius: 8
+                                    color: tabs.currentIndex === 1 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
+                                    border.color: tabs.currentIndex === 1 ? root.primaryColor : root.borderColor
+                                }
+                                contentItem: Text {
+                                    text: "差异分析"
+                                    color: root.textColor
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.bold: tabs.currentIndex === 1
+                                }
+                            }
                         }
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: 300
-                        Layout.preferredHeight: 38
-                        radius: 6
-                        color: root.cardColor
+                        Layout.preferredWidth: 320
+                        Layout.preferredHeight: 42
+                        radius: 10
+                        color: root.subtleColor
                         border.color: root.borderColor
 
                         TextField {
                             id: globalSearch
                             anchors.fill: parent
-                            anchors.margins: 1
+                            anchors.margins: 2
                             placeholderText: "全文搜索（料号/位号/规格/备注）"
                             color: root.textColor
                             placeholderTextColor: root.mutedTextColor
+                            verticalAlignment: TextInput.AlignVCenter
+                            background: Rectangle {
+                                radius: 8
+                                color: root.cardColor
+                                border.color: root.borderColor
+                            }
                             onTextChanged: root.appCtx.bomModel.setFilterKeyword(text)
                         }
                     }
-                    Button {
+
+                    AppButton {
+                        themeColors: {
+                            "card": root.cardColor,
+                            "border": root.borderColor,
+                            "text": root.textColor,
+                            "muted": root.mutedTextColor,
+                            "primary": root.primaryColor,
+                            "subtle": root.subtleColor
+                        }
+                        accent: true
                         text: "清空"
+                        implicitHeight: 42
                         onClicked: {
                             globalSearch.clear()
                             root.appCtx.bomModel.setFilterKeyword("")
@@ -261,7 +317,3 @@ ApplicationWindow {
         }
     }
 }
-
-
-
-

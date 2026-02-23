@@ -1,0 +1,5 @@
+﻿AppButton 1.0 AppButton.qml
+AppToolButton 1.0 AppToolButton.qml
+BomPane 1.0 BomPane.qml
+SidebarModuleCard 1.0 SidebarModuleCard.qml
+SidebarPane 1.0 SidebarPane.qml

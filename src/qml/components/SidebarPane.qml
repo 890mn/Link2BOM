@@ -1,4 +1,4 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -25,7 +25,7 @@ Rectangle {
 
     FontLoader {
         id: audioWide
-        source: "qrc:/qt/qml/Link2BOM/assets/Audiowide-Regular.ttf"
+        source: "qrc:/assets/Audiowide-Regular.ttf"
     }
 
     Settings {
@@ -56,8 +56,8 @@ Rectangle {
 
             Image {
                 source: root.app.theme.currentThemeName === "Dark"
-                    ? "qrc:/qt/qml/Link2BOM/assets/Github-dark.png"
-                    : "qrc:/qt/qml/Link2BOM/assets/Github-light.png"
+                    ? "qrc:/assets/Github-dark.png"
+                    : "qrc:/assets/Github-light.png"
                 Layout.preferredWidth: 85
                 Layout.preferredHeight: 85
                 fillMode: Image.PreserveAspectFit
@@ -147,9 +147,23 @@ Rectangle {
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 8
-                    Button { text: "立创导入（XLS）"; Layout.fillWidth: true; onClicked: root.requestImport() }
-                    Button { text: "从 XLS/XLSX 导入"; Layout.fillWidth: true; onClicked: root.requestImport() }
-                    Button {
+
+                    AppButton {
+                        themeColors: root.themeColors
+                        text: "立创导入（XLS）"
+                        Layout.fillWidth: true
+                        onClicked: root.requestImport()
+                    }
+
+                    AppButton {
+                        themeColors: root.themeColors
+                        text: "从 XLS/XLSX 导入"
+                        Layout.fillWidth: true
+                        onClicked: root.requestImport()
+                    }
+
+                    AppButton {
+                        themeColors: root.themeColors
                         text: "OCR 图片导入（后续）"
                         Layout.fillWidth: true
                         onClicked: root.app.notify("OCR 导入：目标项目 " + root.app.projects.selectedProject + "（识别流程待接入）")
@@ -168,7 +182,9 @@ Rectangle {
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 8
-                    Button {
+
+                    AppButton {
+                        themeColors: root.themeColors
                         text: "导出 CSV"
                         Layout.fillWidth: true
                         onClicked: root.app.notify("CSV 导出任务已触发：范围 " + root.app.projects.selectedProject)
@@ -181,7 +197,7 @@ Rectangle {
                 title: "项目"
                 themeColors: root.themeColors
                 collapsed: sidebarSettings.projectsCollapsed
-                normalHeight: 280
+                normalHeight: 260
                 onCollapsedChanged: sidebarSettings.projectsCollapsed = collapsed
 
                 ColumnLayout {
@@ -192,9 +208,7 @@ Rectangle {
                         id: projectList
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        clip: true
                         model: root.app.projects.model
-                        currentIndex: Math.max(0, root.app.projects.projectNames(true).indexOf(root.app.projects.selectedProject))
 
                         delegate: ItemDelegate {
                             id: projectDelegate
@@ -204,7 +218,6 @@ Rectangle {
                                       root.app.projects.model.index(projectDelegate.index, 0),
                                       Qt.DisplayRole
                                   ) ?? ""
-                            leftPadding: 14
 
                             contentItem: Text {
                                 text: projectDelegate.text
@@ -231,13 +244,27 @@ Rectangle {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Button { text: "新建"; Layout.fillWidth: true; onClicked: root.requestNewProject() }
-                        Button {
+
+                        AppButton {
+                            themeColors: root.themeColors
+                            text: "新建"
+                            Layout.fillWidth: true
+                            onClicked: root.requestNewProject()
+                        }
+
+                        AppButton {
+                            themeColors: root.themeColors
                             text: "重命名"
                             Layout.fillWidth: true
                             onClicked: root.requestRenameProject(projectList.currentIndex, root.app.projects.selectedProject)
                         }
-                        Button { text: "取消选中"; Layout.fillWidth: true; onClicked: root.app.projects.clearSelection() }
+
+                        AppButton {
+                            themeColors: root.themeColors
+                            text: "取消选中"
+                            Layout.fillWidth: true
+                            onClicked: root.app.projects.clearSelection()
+                        }
                     }
                 }
             }
@@ -297,8 +324,20 @@ Rectangle {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Button { text: "新增"; Layout.fillWidth: true; onClicked: root.requestNewCategory() }
-                        Button { text: "修改"; Layout.fillWidth: true; onClicked: root.requestRenameCategory(categoryList.currentIndex, root.selectedCategoryName) }
+
+                        AppButton {
+                            themeColors: root.themeColors
+                            text: "新增"
+                            Layout.fillWidth: true
+                            onClicked: root.requestNewCategory()
+                        }
+
+                        AppButton {
+                            themeColors: root.themeColors
+                            text: "修改"
+                            Layout.fillWidth: true
+                            onClicked: root.requestRenameCategory(categoryList.currentIndex, root.selectedCategoryName)
+                        }
                     }
                 }
             }
@@ -310,3 +349,4 @@ Rectangle {
         }
     }
 }
+
