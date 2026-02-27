@@ -8,6 +8,8 @@ Rectangle {
     id: root
     required property var app
     required property var themeColors
+    required property bool pinnedTopMost
+    signal togglePinned()
     signal requestImport()
     signal requestNewProject()
     signal requestRenameProject(int index, string currentName)
@@ -43,7 +45,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: 12
-        height: 92
+        height: 96
         radius: 12
         color: root.themeColors.card
         border.color: root.themeColors.border
@@ -74,40 +76,94 @@ Rectangle {
                 spacing: 4
                 Layout.topMargin: -8
 
-                Label {
-                    text: "Link2BOM"
-                    font.family: audioWide.name
-                    font.pixelSize: 28
-                    font.bold: true
-                    color: root.themeColors.primary
+                Item {
+                    Layout.preferredWidth: 190
+                    Layout.preferredHeight: 34
+
+                    Label {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Link2BOM"
+                        font.family: audioWide.name
+                        font.pixelSize: 28
+                        font.bold: true
+                        color: root.themeColors.primary
+                    }
+
+                    Image {
+                        visible: root.pinnedTopMost
+                        source: root.app.theme.currentThemeName === "Dark"
+                            ? "qrc:/assets/pin-dark.png"
+                            : "qrc:/assets/pin-light.png"
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.topMargin: 4
+                        width: 16
+                        height: 16
+                        fillMode: Image.PreserveAspectFit
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.togglePinned()
+                    }
                 }
 
                 RowLayout {
                     spacing: 8
 
                     Rectangle {
-                        Layout.preferredWidth: 14
-                        Layout.preferredHeight: 14
-                        radius: 7
-                        color: root.app.theme.currentThemeName === "Light" ? root.themeColors.primary : "transparent"
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                        radius: 8
+                        color: root.app.theme.currentIndex === 0 ? root.themeColors.primary : "transparent"
                         border.color: root.themeColors.primary
+                        ToolTip.visible: systemMouse.containsMouse
+                        ToolTip.text: "系统主题"
+
                         MouseArea {
+                            id: systemMouse
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.app.theme.currentIndex = 0
                         }
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: 14
-                        Layout.preferredHeight: 14
-                        radius: 7
-                        color: root.app.theme.currentThemeName === "Dark" ? root.themeColors.primary : "transparent"
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                        radius: 8
+                        color: root.app.theme.currentIndex === 1 ? root.themeColors.primary : "transparent"
                         border.color: root.themeColors.primary
+                        ToolTip.visible: lightMouse.containsMouse
+                        ToolTip.text: "浅色主题"
+
                         MouseArea {
+                            id: lightMouse
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.app.theme.currentIndex = 1
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                        radius: 8
+                        color: root.app.theme.currentIndex === 2 ? root.themeColors.primary : "transparent"
+                        border.color: root.themeColors.primary
+                        ToolTip.visible: darkMouse.containsMouse
+                        ToolTip.text: "深色主题"
+
+                        MouseArea {
+                            id: darkMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.app.theme.currentIndex = 2
                         }
                     }
 
@@ -141,7 +197,7 @@ Rectangle {
                 title: "导入"
                 themeColors: root.themeColors
                 collapsed: sidebarSettings.importCollapsed
-                normalHeight: 156
+                normalHeight: 176
                 onCollapsedChanged: sidebarSettings.importCollapsed = collapsed
 
                 ColumnLayout {
@@ -176,7 +232,7 @@ Rectangle {
                 title: "导出"
                 themeColors: root.themeColors
                 collapsed: sidebarSettings.exportCollapsed
-                normalHeight: 92
+                normalHeight: 96
                 onCollapsedChanged: sidebarSettings.exportCollapsed = collapsed
 
                 ColumnLayout {
@@ -349,4 +405,3 @@ Rectangle {
         }
     }
 }
-

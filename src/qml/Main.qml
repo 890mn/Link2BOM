@@ -7,8 +7,8 @@ import "components"
 
 ApplicationWindow {
     id: root
-    width: Math.min(1600, Math.max(1200, Math.round(Screen.width * 0.88)))
-    height: Math.min(980, Math.max(760, Math.round(Screen.height * 0.88)))
+    width: minimumWidth
+    height: minimumHeight
     visible: true
     title: "Link2BOM"
     minimumWidth: 1100
@@ -18,6 +18,11 @@ ApplicationWindow {
     property string activeProjectForImport: ""
     property int renameProjectIndex: -1
     property int renameCategoryIndex: -1
+    property bool pinnedTopMost: false
+
+    flags: root.pinnedTopMost
+        ? (Qt.Window | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint)
+        : (Qt.Window | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
 
     property bool darkTheme: root.appCtx.theme.currentThemeName === "Dark"
     property color bgColor: darkTheme ? "#141622" : "#F8FAFC"
@@ -27,6 +32,17 @@ ApplicationWindow {
     property color mutedTextColor: darkTheme ? "#9A8FA2" : "#5F6B73"
     property color primaryColor: darkTheme ? "#B08FA8" : "#C9778F"
     property color subtleColor: darkTheme ? "#22283A" : "#F1F5F9"
+
+    function themeColorsObj() {
+        return {
+            "card": root.cardColor,
+            "border": root.borderColor,
+            "text": root.textColor,
+            "muted": root.mutedTextColor,
+            "primary": root.primaryColor,
+            "subtle": root.subtleColor
+        }
+    }
 
     color: bgColor
     palette.window: bgColor
@@ -113,14 +129,9 @@ ApplicationWindow {
             Layout.preferredWidth: 340
             Layout.fillHeight: true
             app: root.appCtx
-            themeColors: {
-                "card": root.cardColor,
-                "border": root.borderColor,
-                "text": root.textColor,
-                "muted": root.mutedTextColor,
-                "primary": root.primaryColor,
-                "subtle": root.subtleColor
-            }
+            pinnedTopMost: root.pinnedTopMost
+            themeColors: root.themeColorsObj()
+            onTogglePinned: root.pinnedTopMost = !root.pinnedTopMost
             onRequestImport: projectForImportDialog.open()
             onRequestNewProject: {
                 inputDialog.title = "新建项目"
@@ -168,102 +179,102 @@ ApplicationWindow {
                 anchors.margins: 12
                 spacing: 8
 
-                RowLayout {
+                Rectangle {
                     Layout.fillWidth: true
-                    spacing: 8
+                    Layout.preferredHeight: 50
+                    radius: 12
+                    color: root.subtleColor
+                    border.color: root.borderColor
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 42
-                        radius: 10
-                        color: root.subtleColor
-                        border.color: root.borderColor
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        spacing: 8
 
-                        TabBar {
-                            id: tabs
-                            anchors.fill: parent
-                            anchors.margins: 3
-                            spacing: 6
-                            background: Rectangle {
-                                radius: 8
-                                color: "transparent"
-                            }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 42
+                            radius: 12
+                            color: root.cardColor
+                            border.color: root.borderColor
 
-                            TabButton {
-                                text: "BOM 视图"
-                                implicitHeight: 34
+                            TabBar {
+                                id: tabs
+                                anchors.fill: parent
+                                anchors.margins: 2
+                                spacing: 6
                                 background: Rectangle {
-                                    radius: 8
-                                    color: tabs.currentIndex === 0 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
-                                    border.color: tabs.currentIndex === 0 ? root.primaryColor : root.borderColor
+                                    radius: 10
+                                    color: "transparent"
                                 }
-                                contentItem: Text {
+
+                                TabButton {
                                     text: "BOM 视图"
-                                    color: root.textColor
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    font.bold: tabs.currentIndex === 0
+                                    implicitHeight: 36
+                                    background: Rectangle {
+                                        radius: 10
+                                        color: tabs.currentIndex === 0 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
+                                        border.color: tabs.currentIndex === 0 ? root.primaryColor : "transparent"
+                                    }
+                                    contentItem: Text {
+                                        text: "BOM 视图"
+                                        color: root.textColor
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        font.bold: tabs.currentIndex === 0
+                                    }
                                 }
-                            }
 
-                            TabButton {
-                                text: "差异分析"
-                                implicitHeight: 34
-                                background: Rectangle {
-                                    radius: 8
-                                    color: tabs.currentIndex === 1 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
-                                    border.color: tabs.currentIndex === 1 ? root.primaryColor : root.borderColor
-                                }
-                                contentItem: Text {
+                                TabButton {
                                     text: "差异分析"
-                                    color: root.textColor
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    font.bold: tabs.currentIndex === 1
+                                    implicitHeight: 36
+                                    background: Rectangle {
+                                        radius: 10
+                                        color: tabs.currentIndex === 1 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
+                                        border.color: tabs.currentIndex === 1 ? root.primaryColor : "transparent"
+                                    }
+                                    contentItem: Text {
+                                        text: "差异分析"
+                                        color: root.textColor
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        font.bold: tabs.currentIndex === 1
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Rectangle {
-                        Layout.preferredWidth: 320
-                        Layout.preferredHeight: 42
-                        radius: 10
-                        color: root.subtleColor
-                        border.color: root.borderColor
+                        Rectangle {
+                            Layout.preferredWidth: 320
+                            Layout.preferredHeight: 42
+                            radius: 12
+                            color: root.cardColor
+                            border.color: root.borderColor
 
-                        TextField {
-                            id: globalSearch
-                            anchors.fill: parent
-                            anchors.margins: 2
-                            placeholderText: "全文搜索（料号/位号/规格/备注）"
-                            color: root.textColor
-                            placeholderTextColor: root.mutedTextColor
-                            verticalAlignment: TextInput.AlignVCenter
-                            background: Rectangle {
-                                radius: 8
-                                color: root.cardColor
-                                border.color: root.borderColor
+                            TextField {
+                                id: globalSearch
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                placeholderText: "全文搜索（料号/位号/规格/备注）"
+                                color: root.textColor
+                                placeholderTextColor: root.mutedTextColor
+                                verticalAlignment: TextInput.AlignVCenter
+                                background: Item {}
+                                onTextChanged: root.appCtx.bomModel.setFilterKeyword(text)
                             }
-                            onTextChanged: root.appCtx.bomModel.setFilterKeyword(text)
                         }
-                    }
 
-                    AppButton {
-                        themeColors: {
-                            "card": root.cardColor,
-                            "border": root.borderColor,
-                            "text": root.textColor,
-                            "muted": root.mutedTextColor,
-                            "primary": root.primaryColor,
-                            "subtle": root.subtleColor
-                        }
-                        accent: true
-                        text: "清空"
-                        implicitHeight: 42
-                        onClicked: {
-                            globalSearch.clear()
-                            root.appCtx.bomModel.setFilterKeyword("")
+                        AppButton {
+                            themeColors: root.themeColorsObj()
+                            accent: true
+                            text: "清空"
+                            cornerRadius: 12
+                            implicitHeight: 42
+                            onClicked: {
+                                globalSearch.clear()
+                                root.appCtx.bomModel.setFilterKeyword("")
+                            }
                         }
                     }
                 }
@@ -275,20 +286,13 @@ ApplicationWindow {
 
                     BomPane {
                         app: root.appCtx
-                        themeColors: {
-                            "card": root.cardColor,
-                            "border": root.borderColor,
-                            "text": root.textColor,
-                            "muted": root.mutedTextColor,
-                            "primary": root.primaryColor,
-                            "subtle": root.subtleColor
-                        }
+                        themeColors: root.themeColorsObj()
                     }
 
                     Rectangle {
                         color: root.cardColor
                         border.color: root.borderColor
-                        radius: 8
+                        radius: 12
                         ColumnLayout {
                             anchors.fill: parent
                             anchors.margins: 12
@@ -302,7 +306,7 @@ ApplicationWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 34
-                    radius: 6
+                    radius: 12
                     color: root.subtleColor
                     border.color: root.borderColor
                     Label {

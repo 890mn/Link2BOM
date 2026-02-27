@@ -1,4 +1,4 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
@@ -6,6 +6,7 @@ Button {
     id: control
     required property var themeColors
     property bool accent: false
+    property int cornerRadius: 10
 
     implicitHeight: 34
     implicitWidth: Math.max(88, contentItem.implicitWidth + leftPadding + rightPadding)
@@ -25,7 +26,7 @@ Button {
     }
 
     background: Rectangle {
-        radius: 8
+        radius: control.cornerRadius
         border.width: 1
         border.color: control.accent
             ? Qt.darker(control.themeColors.primary, 1.15)
@@ -43,3 +44,4 @@ Button {
         }
     }
 }
+

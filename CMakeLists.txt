@@ -63,6 +63,7 @@ set_target_properties(${APP_NAME} PROPERTIES
 qt_add_qml_module(${APP_NAME}
     URI ${APP_NAME}
     VERSION 1.0
+    NO_CACHEGEN
     QML_FILES ${APP_QML_FILES}
     RESOURCES src/qml/components/qmldir
 )

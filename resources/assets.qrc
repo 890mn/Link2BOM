@@ -5,5 +5,7 @@
         <file alias="assets/Github-dark.png">../assets/Github-dark.png</file>
         <file alias="assets/Github-light.png">../assets/Github-light.png</file>
         <file alias="assets/icon_100.png">../assets/icon_100.png</file>
+        <file alias="assets/pin-dark.png">../assets/pin-dark.png</file>
+        <file alias="assets/pin-light.png">../assets/pin-light.png</file>
     </qresource>
 </RCC>

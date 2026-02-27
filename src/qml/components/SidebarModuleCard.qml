@@ -17,7 +17,7 @@ Rectangle {
 
     property real expandedHeight: Math.max(normalHeight, headerBar.implicitHeight + contentHost.childrenRect.height + 20)
 
-    radius: 10
+    radius: 12
     color: root.themeColors.subtle
     border.color: root.themeColors.border
     implicitWidth: 300
@@ -31,7 +31,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.margins: 8
         implicitHeight: 30
-        radius: 6
+        radius: 10
         color: "transparent"
 
         RowLayout {
@@ -87,3 +87,4 @@ Rectangle {
         visible: !root.collapsed
     }
 }
+
