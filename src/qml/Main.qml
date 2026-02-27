@@ -183,8 +183,8 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 50
                     radius: 12
-                    color: root.subtleColor
-                    border.color: root.borderColor
+                    color: "transparent"
+                    border.color: "transparent"
 
                     RowLayout {
                         anchors.fill: parent
@@ -192,7 +192,9 @@ ApplicationWindow {
                         spacing: 8
 
                         Rectangle {
-                            Layout.fillWidth: true
+                            Layout.preferredWidth: 290
+                            Layout.minimumWidth: 290
+                            Layout.maximumWidth: 290
                             Layout.preferredHeight: 42
                             radius: 12
                             color: root.cardColor
@@ -201,8 +203,11 @@ ApplicationWindow {
                             TabBar {
                                 id: tabs
                                 anchors.fill: parent
-                                anchors.margins: 2
+                                anchors.margins: 0
+                                anchors.topMargin: 3
+                                anchors.bottomMargin: -1
                                 spacing: 6
+                                padding: 0
                                 background: Rectangle {
                                     radius: 10
                                     color: "transparent"
@@ -210,34 +215,54 @@ ApplicationWindow {
 
                                 TabButton {
                                     text: "BOM 视图"
+                                    height: tabs.height
+                                    implicitWidth: 136
                                     implicitHeight: 36
+                                    topPadding: 0
+                                    bottomPadding: 0
+                                    leftPadding: 0
+                                    rightPadding: 0
                                     background: Rectangle {
+                                        anchors.fill: parent
                                         radius: 10
+                                        antialiasing: true
                                         color: tabs.currentIndex === 0 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
                                         border.color: tabs.currentIndex === 0 ? root.primaryColor : "transparent"
+                                        border.width: tabs.currentIndex === 0 ? 1 : 0
                                     }
                                     contentItem: Text {
                                         text: "BOM 视图"
                                         color: root.textColor
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
+                                        font.pixelSize: 14
                                         font.bold: tabs.currentIndex === 0
                                     }
                                 }
 
                                 TabButton {
                                     text: "差异分析"
+                                    height: tabs.height
+                                    implicitWidth: 136
                                     implicitHeight: 36
+                                    topPadding: 0
+                                    bottomPadding: 0
+                                    leftPadding: 0
+                                    rightPadding: 0
                                     background: Rectangle {
+                                        anchors.fill: parent
                                         radius: 10
+                                        antialiasing: true
                                         color: tabs.currentIndex === 1 ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.18) : "transparent"
                                         border.color: tabs.currentIndex === 1 ? root.primaryColor : "transparent"
+                                        border.width: tabs.currentIndex === 1 ? 1 : 0
                                     }
                                     contentItem: Text {
                                         text: "差异分析"
                                         color: root.textColor
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
+                                        font.pixelSize: 14
                                         font.bold: tabs.currentIndex === 1
                                     }
                                 }
@@ -245,7 +270,7 @@ ApplicationWindow {
                         }
 
                         Rectangle {
-                            Layout.preferredWidth: 320
+                            Layout.fillWidth: true
                             Layout.preferredHeight: 42
                             radius: 12
                             color: root.cardColor
@@ -267,10 +292,11 @@ ApplicationWindow {
 
                         AppButton {
                             themeColors: root.themeColorsObj()
-                            accent: true
                             text: "清空"
-                            cornerRadius: 12
+                            font.pixelSize: 14
+                            cornerRadius: 10
                             implicitHeight: 42
+                            implicitWidth: 78
                             onClicked: {
                                 globalSearch.clear()
                                 root.appCtx.bomModel.setFilterKeyword("")

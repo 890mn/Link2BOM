@@ -1,7 +1,4 @@
 build/
-build-release/
-build-rel-make/
-build-qt-release/
 dist/
 .qtcreator/
 .qmlls.ini

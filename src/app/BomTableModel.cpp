@@ -1,4 +1,4 @@
-#include "BomTableModel.h"
+﻿#include "BomTableModel.h"
 
 #include <algorithm>
 
@@ -61,10 +61,12 @@ void BomTableModel::setVisibleHeaderAt(int slot, const QString &header)
     if (slot < 0 || slot >= m_visibleSourceColumns.size()) {
         return;
     }
+
     const int sourceIndex = m_sourceHeaders.indexOf(header);
     if (sourceIndex < 0 || sourceIndex == m_visibleSourceColumns[slot]) {
         return;
     }
+
     m_visibleSourceColumns[slot] = sourceIndex;
     emit headerDataChanged(Qt::Horizontal, slot, slot);
     if (!m_filteredRows.isEmpty()) {
@@ -82,16 +84,48 @@ void BomTableModel::sortByVisibleColumn(int slot, bool ascending)
     if (slot < 0 || slot >= m_visibleSourceColumns.size()) {
         return;
     }
+
     const int sourceIndex = m_visibleSourceColumns[slot];
 
-    beginResetModel();
     std::sort(m_sourceRows.begin(), m_sourceRows.end(), [sourceIndex, ascending](const QStringList &a, const QStringList &b) {
         const QString left = sourceIndex < a.size() ? a[sourceIndex] : QString();
         const QString right = sourceIndex < b.size() ? b[sourceIndex] : QString();
         return ascending ? left < right : left > right;
     });
-    endResetModel();
+
     rebuildFilteredRows();
+}
+
+void BomTableModel::insertVisibleSlot(int slot)
+{
+    if (m_sourceHeaders.isEmpty()) {
+        return;
+    }
+
+    const int insertPos = std::clamp(slot, 0, static_cast<int>(m_visibleSourceColumns.size()));
+
+    int newSourceIndex = 0;
+    for (int i = 0; i < m_sourceHeaders.size(); ++i) {
+        if (!m_visibleSourceColumns.contains(i)) {
+            newSourceIndex = i;
+            break;
+        }
+    }
+
+    beginResetModel();
+    m_visibleSourceColumns.insert(insertPos, newSourceIndex);
+    endResetModel();
+}
+
+void BomTableModel::removeVisibleSlot(int slot)
+{
+    if (slot < 0 || slot >= m_visibleSourceColumns.size() || m_visibleSourceColumns.size() <= 1) {
+        return;
+    }
+
+    beginResetModel();
+    m_visibleSourceColumns.removeAt(slot);
+    endResetModel();
 }
 
 QString BomTableModel::filterKeyword() const
@@ -104,6 +138,7 @@ void BomTableModel::setFilterKeyword(const QString &keyword)
     if (keyword == m_filterKeyword) {
         return;
     }
+
     m_filterKeyword = keyword;
     emit filterKeywordChanged();
     rebuildFilteredRows();
@@ -119,6 +154,7 @@ void BomTableModel::setSourceData(const QStringList &headers, const QList<QStrin
         m_visibleSourceColumns.append(i);
     }
     endResetModel();
+
     rebuildFilteredRows();
 }
 
@@ -126,6 +162,7 @@ void BomTableModel::rebuildFilteredRows()
 {
     beginResetModel();
     m_filteredRows.clear();
+
     const QString key = m_filterKeyword.trimmed();
     if (key.isEmpty()) {
         m_filteredRows = m_sourceRows;

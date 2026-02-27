@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QAbstractTableModel>
 
@@ -20,6 +20,8 @@ public:
     Q_INVOKABLE void setVisibleHeaderAt(int slot, const QString &header);
     Q_INVOKABLE int visibleSlotCount() const;
     Q_INVOKABLE void sortByVisibleColumn(int slot, bool ascending);
+    Q_INVOKABLE void insertVisibleSlot(int slot);
+    Q_INVOKABLE void removeVisibleSlot(int slot);
 
     QString filterKeyword() const;
     Q_INVOKABLE void setFilterKeyword(const QString &keyword);

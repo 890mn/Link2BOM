@@ -2,6 +2,8 @@
 
 #include <QObject>
 #include <QUrl>
+#include <QHash>
+#include <QVariant>
 
 #include "BomTableModel.h"
 #include "CategoryController.h"
@@ -30,12 +32,16 @@ public:
     Q_INVOKABLE void cycleTheme();
     Q_INVOKABLE void importLichuang(const QUrl &fileUrl, const QString &projectName);
     Q_INVOKABLE void notify(const QString &message);
+    Q_INVOKABLE QVariantList loadBomWidthRatios(const QString &layoutHash) const;
+    Q_INVOKABLE void saveBomWidthRatios(const QString &layoutHash, const QVariantList &ratios);
 
 signals:
     void statusChanged();
 
 private:
     void setStatus(const QString &status);
+    void loadUiSettings();
+    void saveUiSettings() const;
 
     ThemeController m_theme;
     ProjectController m_projects;
@@ -43,4 +49,5 @@ private:
     BomTableModel m_bomModel;
     ImportService m_importService;
     QString m_status;
+    QHash<QString, QVariantList> m_bomWidthRatiosByLayout;
 };

@@ -196,6 +196,7 @@ Rectangle {
                 width: modulesColumn.width
                 title: "导入"
                 themeColors: root.themeColors
+                darkTheme: root.app.theme.currentThemeName === "Dark"
                 collapsed: sidebarSettings.importCollapsed
                 normalHeight: 176
                 onCollapsedChanged: sidebarSettings.importCollapsed = collapsed
@@ -231,6 +232,7 @@ Rectangle {
                 width: modulesColumn.width
                 title: "导出"
                 themeColors: root.themeColors
+                darkTheme: root.app.theme.currentThemeName === "Dark"
                 collapsed: sidebarSettings.exportCollapsed
                 normalHeight: 96
                 onCollapsedChanged: sidebarSettings.exportCollapsed = collapsed
@@ -252,6 +254,7 @@ Rectangle {
                 width: modulesColumn.width
                 title: "项目"
                 themeColors: root.themeColors
+                darkTheme: root.app.theme.currentThemeName === "Dark"
                 collapsed: sidebarSettings.projectsCollapsed
                 normalHeight: 260
                 onCollapsedChanged: sidebarSettings.projectsCollapsed = collapsed
@@ -329,6 +332,7 @@ Rectangle {
                 width: modulesColumn.width
                 title: "分类组"
                 themeColors: root.themeColors
+                darkTheme: root.app.theme.currentThemeName === "Dark"
                 collapsed: sidebarSettings.categoriesCollapsed
                 normalHeight: 220
                 onCollapsedChanged: sidebarSettings.categoriesCollapsed = collapsed
