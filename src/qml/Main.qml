@@ -19,6 +19,64 @@ ApplicationWindow {
     property int renameProjectIndex: -1
     property int renameCategoryIndex: -1
     property bool pinnedTopMost: false
+    property bool debugPanelVisible: false
+    property var debugEntries: []
+    property string debugLogText: ""
+    property int debugLogLimit: 500
+    property bool showInfoLogs: true
+    property bool showWarningLogs: true
+    property bool showErrorLogs: true
+
+    function rebuildDebugLogText() {
+        const lines = []
+        for (let index = 0; index < debugEntries.length; ++index) {
+            const entry = debugEntries[index]
+            const visible = (entry.level === "INFO" && showInfoLogs)
+                || (entry.level === "WARNING" && showWarningLogs)
+                || (entry.level === "ERROR" && showErrorLogs)
+            if (visible) {
+                lines.push("[" + entry.time + "][" + entry.level + "] " + entry.message)
+            }
+        }
+        debugLogText = lines.join("\n")
+    }
+
+    function appendDebugLog(level, message) {
+        if (message === undefined) {
+            message = level
+            level = "INFO"
+        }
+        const stamp = Qt.formatDateTime(new Date(), "hh:mm:ss")
+        const normalized = String(level).toUpperCase()
+        const safeLevel = (normalized === "WARNING" || normalized === "ERROR") ? normalized : "INFO"
+        const next = debugEntries.slice()
+        next.push({
+            "time": stamp,
+            "level": safeLevel,
+            "message": String(message)
+        })
+        if (next.length > debugLogLimit) {
+            next.splice(0, next.length - debugLogLimit)
+        }
+        debugEntries = next
+        rebuildDebugLogText()
+    }
+
+    function logInfo(message) { appendDebugLog("INFO", message) }
+    function logWarning(message) { appendDebugLog("WARNING", message) }
+    function logError(message) { appendDebugLog("ERROR", message) }
+
+    onShowInfoLogsChanged: rebuildDebugLogText()
+    onShowWarningLogsChanged: rebuildDebugLogText()
+    onShowErrorLogsChanged: rebuildDebugLogText()
+    onDebugEntriesChanged: rebuildDebugLogText()
+    onDebugPanelVisibleChanged: {
+        if (debugPanelVisible) {
+            logInfo("Debug panel opened")
+        } else {
+            logInfo("Debug panel closed")
+        }
+    }
 
     flags: root.pinnedTopMost
         ? (Qt.Window | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint)
@@ -63,6 +121,17 @@ ApplicationWindow {
         modal: true
         standardButtons: Dialog.Ok | Dialog.Cancel
         width: 420
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2)
+        parent: Overlay.overlay
+        closePolicy: Popup.CloseOnEscape
+        padding: 14
+
+        background: Rectangle {
+            radius: 14
+            color: root.cardColor
+            border.color: root.borderColor
+        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -84,9 +153,12 @@ ApplicationWindow {
             if (created.length > 0) {
                 root.appCtx.projects.addProject(created)
                 root.activeProjectForImport = created
+                root.logInfo("Create project for import: " + created)
             } else {
                 root.activeProjectForImport = projectCombo.currentText
+                root.logInfo("Use existing project for import: " + root.activeProjectForImport)
             }
+            root.logInfo("Open file picker for BOM import")
             fileDialog.open()
             newProjectField.clear()
         }
@@ -96,7 +168,10 @@ ApplicationWindow {
         id: fileDialog
         title: "选择立创导出文件"
         nameFilters: ["Spreadsheet Files (*.xlsx *.xls *.csv)", "All Files (*.*)"]
-        onAccepted: root.appCtx.importLichuang(selectedFile, root.activeProjectForImport)
+        onAccepted: {
+            root.logInfo("Import file selected: " + selectedFile.toString())
+            root.appCtx.importLichuang(selectedFile, root.activeProjectForImport)
+        }
     }
 
     Dialog {
@@ -112,11 +187,52 @@ ApplicationWindow {
 
         onAccepted: {
             const value = dialogInput.text.trim()
-            if (mode === "newProject") root.appCtx.projects.addProject(value)
-            if (mode === "renameProject") root.appCtx.projects.renameProject(root.renameProjectIndex, value)
-            if (mode === "newCategory") root.appCtx.categories.addCategory(value)
-            if (mode === "renameCategory") root.appCtx.categories.renameCategory(root.renameCategoryIndex, value)
+            if (mode === "newProject") {
+                root.logInfo("New project: " + value)
+                root.appCtx.projects.addProject(value)
+            }
+            if (mode === "renameProject") {
+                root.logInfo("Rename project index " + root.renameProjectIndex + " -> " + value)
+                root.appCtx.projects.renameProject(root.renameProjectIndex, value)
+            }
+            if (mode === "newCategory") {
+                root.logInfo("New category: " + value)
+                root.appCtx.categories.addCategory(value)
+            }
+            if (mode === "renameCategory") {
+                root.logInfo("Rename category index " + root.renameCategoryIndex + " -> " + value)
+                root.appCtx.categories.renameCategory(root.renameCategoryIndex, value)
+            }
             dialogInput.clear()
+        }
+    }
+
+    Connections {
+        target: root.appCtx
+        function onStatusChanged() {
+            const statusText = root.appCtx.status
+            const lower = statusText.toLowerCase()
+            if (lower.includes("error") || lower.includes("failed")) {
+                root.logError("Status: " + statusText)
+            } else if (lower.includes("warning") || lower.includes("please")) {
+                root.logWarning("Status: " + statusText)
+            } else {
+                root.logInfo("Status: " + statusText)
+            }
+        }
+    }
+
+    Connections {
+        target: root.appCtx.theme
+        function onCurrentIndexChanged() {
+            root.logInfo("Theme changed: " + root.appCtx.theme.currentThemeName)
+        }
+    }
+
+    Connections {
+        target: root.appCtx.projects
+        function onSelectedProjectChanged() {
+            root.logInfo("Selected project changed: " + root.appCtx.projects.selectedProject)
         }
     }
 
@@ -131,39 +247,78 @@ ApplicationWindow {
             app: root.appCtx
             pinnedTopMost: root.pinnedTopMost
             themeColors: root.themeColorsObj()
-            onTogglePinned: root.pinnedTopMost = !root.pinnedTopMost
-            onRequestImport: projectForImportDialog.open()
+            onTogglePinned: {
+                root.pinnedTopMost = !root.pinnedTopMost
+                root.logInfo("Toggle pin top-most: " + root.pinnedTopMost)
+            }
+            onToggleDebugPanel: {
+                root.debugPanelVisible = !root.debugPanelVisible
+            }
+            onRequestImport: {
+                root.logInfo("Request import dialog")
+                projectForImportDialog.open()
+            }
             onRequestNewProject: {
+                root.logInfo("Request new project dialog")
                 inputDialog.title = "新建项目"
                 inputDialog.mode = "newProject"
                 inputDialog.open()
             }
             onRequestRenameProject: function(index, currentName) {
-                if (index <= 0 || currentName === "全部项目") {
+                if (index <= 0 || currentName === "All Projects" || currentName === "全部项目") {
+                    root.logWarning("Rename project rejected: no specific project selected")
                     root.appCtx.notify("请先选择一个具体项目再重命名。")
                     return
                 }
+                root.logInfo("Request rename project dialog: index " + index + ", name " + currentName)
                 root.renameProjectIndex = index
                 inputDialog.title = "重命名项目"
                 inputDialog.mode = "renameProject"
                 dialogInput.text = currentName
                 inputDialog.open()
             }
+            onRequestDeleteProject: function(index, currentName) {
+                if (index <= 0 || currentName === "All Projects" || currentName === "全部项目") {
+                    root.logWarning("Delete project rejected: no specific project selected")
+                    root.appCtx.notify("请先选择一个具体项目再删除。")
+                    return
+                }
+                root.logInfo("Delete project request: index " + index + ", name " + currentName)
+                if (!root.appCtx.deleteProject(index)) {
+                    root.logError("Delete project failed: " + currentName)
+                }
+            }
             onRequestNewCategory: {
+                root.logInfo("Request new category dialog")
                 inputDialog.title = "新增分类组"
                 inputDialog.mode = "newCategory"
                 inputDialog.open()
             }
             onRequestRenameCategory: function(index, currentName) {
                 if (index < 0) {
+                    root.logWarning("Rename category rejected: no category selected")
                     root.appCtx.notify("请先选择要修改的分类组。")
                     return
                 }
+                root.logInfo("Request rename category dialog: index " + index + ", name " + currentName)
                 root.renameCategoryIndex = index
                 inputDialog.title = "修改分类组"
                 inputDialog.mode = "renameCategory"
                 dialogInput.text = currentName
                 inputDialog.open()
+            }
+            onRequestDeleteCategory: function(index, currentName) {
+                if (index < 0) {
+                    root.logWarning("Delete category rejected: no category selected")
+                    root.appCtx.notify("请先选择要删除的分类组。")
+                    return
+                }
+                root.logInfo("Delete category request: index " + index + ", name " + currentName)
+                if (!root.appCtx.categories.removeCategory(index)) {
+                    root.logError("Delete category failed: " + currentName)
+                } else {
+                    root.appCtx.notify("分类组已删除: " + currentName)
+                }
             }
         }
 
@@ -211,6 +366,9 @@ ApplicationWindow {
                                 background: Rectangle {
                                     radius: 10
                                     color: "transparent"
+                                }
+                                onCurrentIndexChanged: {
+                                    root.logInfo("View switched: " + (currentIndex === 0 ? "BOM" : "Diff"))
                                 }
 
                                 TabButton {
@@ -286,7 +444,10 @@ ApplicationWindow {
                                 placeholderTextColor: root.mutedTextColor
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Item {}
-                                onTextChanged: root.appCtx.bomModel.setFilterKeyword(text)
+                                onTextChanged: {
+                                    root.appCtx.bomModel.setFilterKeyword(text)
+                                    root.logInfo("Global search changed: \"" + text + "\"")
+                                }
                             }
                         }
 
@@ -300,6 +461,7 @@ ApplicationWindow {
                             onClicked: {
                                 globalSearch.clear()
                                 root.appCtx.bomModel.setFilterKeyword("")
+                                root.logInfo("Global search cleared")
                             }
                         }
                     }
@@ -313,6 +475,9 @@ ApplicationWindow {
                     BomPane {
                         app: root.appCtx
                         themeColors: root.themeColorsObj()
+                        onDebugLog: function(level, message) {
+                            root.appendDebugLog(level, "BOM: " + message)
+                        }
                     }
 
                     Rectangle {
@@ -330,17 +495,158 @@ ApplicationWindow {
                 }
 
                 Rectangle {
+                    visible: root.debugPanelVisible
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 220
                     radius: 12
                     color: root.subtleColor
                     border.color: root.borderColor
-                    Label {
+
+                    ColumnLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 10
-                        verticalAlignment: Text.AlignVCenter
-                        text: root.appCtx.status
-                        color: root.textColor
+                        anchors.margins: 8
+                        spacing: 6
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: "Debug Console"
+                                color: root.textColor
+                                elide: Text.ElideRight
+                                font.bold: true
+                            }
+
+                            CheckBox {
+                                id: infoLevelCheck
+                                text: "Info"
+                                checked: root.showInfoLogs
+                                implicitHeight: 28
+                                implicitWidth: 74
+                                leftPadding: 8
+                                rightPadding: 8
+                                onToggled: root.showInfoLogs = checked
+                                background: Rectangle {
+                                    radius: 8
+                                    border.color: infoLevelCheck.checked ? root.primaryColor : root.borderColor
+                                    color: infoLevelCheck.checked
+                                        ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.14)
+                                        : root.subtleColor
+                                }
+                                indicator: Rectangle {
+                                    implicitWidth: 0
+                                    implicitHeight: 0
+                                    visible: false
+                                }
+                                contentItem: Text {
+                                    text: infoLevelCheck.text
+                                    color: root.textColor
+                                    leftPadding: 0
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.pixelSize: 12
+                                }
+                            }
+
+                            CheckBox {
+                                id: warningLevelCheck
+                                text: "Warning"
+                                checked: root.showWarningLogs
+                                implicitHeight: 28
+                                implicitWidth: 96
+                                leftPadding: 8
+                                rightPadding: 8
+                                onToggled: root.showWarningLogs = checked
+                                background: Rectangle {
+                                    radius: 8
+                                    border.color: warningLevelCheck.checked ? root.primaryColor : root.borderColor
+                                    color: warningLevelCheck.checked
+                                        ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.14)
+                                        : root.subtleColor
+                                }
+                                indicator: Rectangle {
+                                    implicitWidth: 0
+                                    implicitHeight: 0
+                                    visible: false
+                                }
+                                contentItem: Text {
+                                    text: warningLevelCheck.text
+                                    color: root.textColor
+                                    leftPadding: 0
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.pixelSize: 12
+                                }
+                            }
+
+                            CheckBox {
+                                id: errorLevelCheck
+                                text: "Error"
+                                checked: root.showErrorLogs
+                                implicitHeight: 28
+                                implicitWidth: 82
+                                leftPadding: 8
+                                rightPadding: 8
+                                onToggled: root.showErrorLogs = checked
+                                background: Rectangle {
+                                    radius: 8
+                                    border.color: errorLevelCheck.checked ? root.primaryColor : root.borderColor
+                                    color: errorLevelCheck.checked
+                                        ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.14)
+                                        : root.subtleColor
+                                }
+                                indicator: Rectangle {
+                                    implicitWidth: 0
+                                    implicitHeight: 0
+                                    visible: false
+                                }
+                                contentItem: Text {
+                                    text: errorLevelCheck.text
+                                    color: root.textColor
+                                    leftPadding: 0
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.pixelSize: 12
+                                }
+                            }
+
+                            AppButton {
+                                themeColors: root.themeColorsObj()
+                                text: "Clear"
+                                implicitHeight: 28
+                                implicitWidth: 72
+                                onClicked: {
+                                    root.debugEntries = []
+                                    root.debugLogText = ""
+                                    root.logInfo("Debug logs cleared")
+                                }
+                            }
+                        }
+
+                        ScrollView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+
+                            TextArea {
+                                id: debugTextArea
+                                readOnly: true
+                                wrapMode: TextEdit.NoWrap
+                                text: root.debugLogText
+                                color: root.textColor
+                                selectionColor: root.primaryColor
+                                selectedTextColor: "#FFFFFF"
+                                font.pixelSize: 12
+                                background: Rectangle {
+                                    color: Qt.rgba(root.cardColor.r, root.cardColor.g, root.cardColor.b, 0.65)
+                                    radius: 8
+                                    border.color: root.borderColor
+                                }
+
+                                onTextChanged: {
+                                    cursorPosition = length
+                                }
+                            }
+                        }
                     }
                 }
             }

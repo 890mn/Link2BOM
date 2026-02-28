@@ -12,19 +12,29 @@ AppController::AppController(QObject *parent)
     connect(&m_theme, &ThemeController::currentIndexChanged, this, [this] {
         setStatus(QStringLiteral("Theme changed: %1").arg(m_theme.currentThemeName()));
     });
+    connect(&m_projects, &ProjectController::selectedProjectChanged, this, [this] {
+        m_bomModel.setProjectFilter(m_projects.selectedProject());
+    });
 
-    m_bomModel.setSourceData({QStringLiteral("项目"),
-                              QStringLiteral("位号"),
-                              QStringLiteral("分类"),
-                              QStringLiteral("料号"),
-                              QStringLiteral("规格"),
-                              QStringLiteral("数量"),
-                              QStringLiteral("供应商"),
-                              QStringLiteral("备注")},
-                             {{QStringLiteral("电源管理板 RevA"), QStringLiteral("R1-R8"), QStringLiteral("电阻电容"), QStringLiteral("RC0603-10K"), QStringLiteral("10K 1% 0603"), QStringLiteral("8"), QStringLiteral("LCSC"), QStringLiteral("常规库存")},
-                              {QStringLiteral("电源管理板 RevA"), QStringLiteral("C1-C4"), QStringLiteral("电阻电容"), QStringLiteral("CC0603-100N"), QStringLiteral("100nF 16V X7R"), QStringLiteral("4"), QStringLiteral("LCSC"), QStringLiteral("去耦")},
-                              {QStringLiteral("传感器节点 V2"), QStringLiteral("U1"), QStringLiteral("芯片 IC"), QStringLiteral("STM32G0"), QStringLiteral("QFN32"), QStringLiteral("1"), QStringLiteral("LCSC"), QStringLiteral("主控")}});
+    m_bomModel.setSourceData({QStringLiteral("\u9879\u76ee"),
+                              QStringLiteral("\u5546\u54c1\u7f16\u53f7"),
+                              QStringLiteral("\u54c1\u724c"),
+                              QStringLiteral("\u5382\u5bb6\u578b\u53f7"),
+                              QStringLiteral("\u5c01\u88c5"),
+                              QStringLiteral("\u5546\u54c1\u540d\u79f0"),
+                              QStringLiteral("\u8ba2\u8d2d\u6570\u91cf\uff08\u4fee\u6539\u540e\uff09"),
+                              QStringLiteral("\u5546\u54c1\u5355\u4ef7"),
+                              QStringLiteral("\u5546\u54c1\u91d1\u989d")},
+                             {{QStringLiteral("Default Project"), QStringLiteral("C25804"), QStringLiteral("Yageo"), QStringLiteral("RC0603FR-0710KL"), QStringLiteral("0603"), QStringLiteral("Resistor 10K"), QStringLiteral("8"), QStringLiteral("0.0015"), QStringLiteral("0.0120")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C14663"), QStringLiteral("Samsung"), QStringLiteral("CL10B104KB8NNNC"), QStringLiteral("0603"), QStringLiteral("Cap 100nF"), QStringLiteral("4"), QStringLiteral("0.0020"), QStringLiteral("0.0080")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C21120"), QStringLiteral("Murata"), QStringLiteral("GRM188R71C105KA12D"), QStringLiteral("0603"), QStringLiteral("Cap 1uF"), QStringLiteral("3"), QStringLiteral("0.0061"), QStringLiteral("0.0183")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C529431"), QStringLiteral("ST"), QStringLiteral("STM32G071KBT6"), QStringLiteral("LQFP32"), QStringLiteral("MCU"), QStringLiteral("1"), QStringLiteral("1.8200"), QStringLiteral("1.8200")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C16581"), QStringLiteral("WCH"), QStringLiteral("CH340C"), QStringLiteral("SOP16"), QStringLiteral("USB-UART"), QStringLiteral("1"), QStringLiteral("0.3100"), QStringLiteral("0.3100")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C29294"), QStringLiteral("TI"), QStringLiteral("TPS54331DR"), QStringLiteral("SOIC8"), QStringLiteral("DC-DC"), QStringLiteral("1"), QStringLiteral("0.7800"), QStringLiteral("0.7800")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C5446"), QStringLiteral("Omron"), QStringLiteral("B3F-1000"), QStringLiteral("THT"), QStringLiteral("Tact Switch"), QStringLiteral("2"), QStringLiteral("0.0900"), QStringLiteral("0.1800")},
+                              {QStringLiteral("Default Project"), QStringLiteral("C7213"), QStringLiteral("Littelfuse"), QStringLiteral("1206L050"), QStringLiteral("1206"), QStringLiteral("PTC Fuse"), QStringLiteral("1"), QStringLiteral("0.1500"), QStringLiteral("0.1500")}});
 
+    m_bomModel.setProjectFilter(m_projects.selectedProject());
     setStatus(QStringLiteral("Ready"));
 }
 
@@ -48,7 +58,7 @@ void AppController::importLichuang(const QUrl &fileUrl, const QString &projectNa
     }
 
     const QString targetProject = projectName.trimmed();
-    if (targetProject.isEmpty() || targetProject == QStringLiteral("全部项目")) {
+    if (targetProject.isEmpty() || targetProject == QStringLiteral("All Projects") || targetProject == QStringLiteral("全部项目")) {
         setStatus(QStringLiteral("Import failed: select a specific project"));
         return;
     }
@@ -61,8 +71,36 @@ void AppController::importLichuang(const QUrl &fileUrl, const QString &projectNa
         return;
     }
 
-    m_bomModel.setSourceData(result.headers, result.rows);
+    if (!m_bomModel.appendRows(result.headers, result.rows)) {
+        setStatus(QStringLiteral("Import failed: header mismatch with current BOM view. Please clear current data or import same template format."));
+        return;
+    }
+    m_projects.setSelectedProject(targetProject);
     setStatus(QStringLiteral("Imported %1 -> %2").arg(fileUrl.fileName(), targetProject));
+}
+
+bool AppController::deleteProject(int index)
+{
+    const QStringList names = m_projects.projectNames(true);
+    if (index < 0 || index >= names.size()) {
+        setStatus(QStringLiteral("Delete project failed: invalid index."));
+        return false;
+    }
+
+    const QString target = names[index];
+    if (target == QStringLiteral("All Projects") || target == QStringLiteral("全部项目")) {
+        setStatus(QStringLiteral("Delete project failed: cannot delete 'All Projects'."));
+        return false;
+    }
+
+    if (!m_projects.removeProject(index)) {
+        setStatus(QStringLiteral("Delete project failed."));
+        return false;
+    }
+
+    m_bomModel.removeRowsByProject(target);
+    setStatus(QStringLiteral("Deleted project: %1").arg(target));
+    return true;
 }
 
 void AppController::notify(const QString &message)

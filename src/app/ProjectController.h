@@ -19,6 +19,7 @@ public:
     Q_INVOKABLE QStringList projectNames(bool includeAll = false) const;
     Q_INVOKABLE bool addProject(const QString &name);
     Q_INVOKABLE bool renameProject(int index, const QString &name);
+    Q_INVOKABLE bool removeProject(int index);
     Q_INVOKABLE void clearSelection();
 
 signals:
@@ -26,5 +27,5 @@ signals:
 
 private:
     QStringListModel m_model;
-    QString m_selectedProject = QStringLiteral("全部项目");
+    QString m_selectedProject = QStringLiteral("Default Project");
 };

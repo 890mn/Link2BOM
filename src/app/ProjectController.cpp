@@ -3,10 +3,8 @@
 ProjectController::ProjectController(QObject *parent)
     : QObject(parent)
 {
-    m_model.setStringList({QStringLiteral("全部项目"),
-                           QStringLiteral("电源管理板 RevA"),
-                           QStringLiteral("传感器节点 V2"),
-                           QStringLiteral("验证样机 Proto-3")});
+    m_model.setStringList({QStringLiteral("All Projects"),
+                           QStringLiteral("Default Project")});
 }
 
 QAbstractItemModel *ProjectController::model()
@@ -32,7 +30,7 @@ QStringList ProjectController::projectNames(bool includeAll) const
 {
     QStringList names = m_model.stringList();
     if (!includeAll) {
-        names.removeAll(QStringLiteral("全部项目"));
+        names.removeAll(QStringLiteral("All Projects"));
     }
     return names;
 }
@@ -61,7 +59,7 @@ bool ProjectController::renameProject(int index, const QString &name)
     }
 
     QStringList names = m_model.stringList();
-    if (index < 0 || index >= names.size() || names[index] == QStringLiteral("全部项目")) {
+    if (index < 0 || index >= names.size() || names[index] == QStringLiteral("All Projects")) {
         return false;
     }
     names[index] = trimmed;
@@ -70,7 +68,24 @@ bool ProjectController::renameProject(int index, const QString &name)
     return true;
 }
 
+bool ProjectController::removeProject(int index)
+{
+    QStringList names = m_model.stringList();
+    if (index < 0 || index >= names.size() || names[index] == QStringLiteral("All Projects")) {
+        return false;
+    }
+
+    const QString removed = names[index];
+    names.removeAt(index);
+    m_model.setStringList(names);
+
+    if (m_selectedProject == removed) {
+        setSelectedProject(QStringLiteral("All Projects"));
+    }
+    return true;
+}
+
 void ProjectController::clearSelection()
 {
-    setSelectedProject(QStringLiteral("全部项目"));
+    setSelectedProject(QStringLiteral("All Projects"));
 }

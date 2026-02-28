@@ -7,13 +7,20 @@ Item {
     id: root
     required property var app
     required property var themeColors
+    signal debugLog(string level, string message)
 
     property var slotAscending: []
     property var customRatios: []
     property int minColumnWidth: 120
     property int widthBucket: Math.max(320, Math.round(contentFrame.width / 16) * 16)
+    property color ratioAccentColor: "#C9778F"
+    property real popupMaxHeight: Math.max(260, root.height - 24)
 
     function openColumnConfig(slot, anchorItem) {
+        if (slot < 0 || slot >= root.app.bomModel.visibleSlotCount()) {
+            root.debugLog("WARNING", "Open column config rejected: invalid slot " + slot)
+            return
+        }
         columnConfigPopup.slot = slot
         const margin = 8
         const point = anchorItem.mapToItem(root, 0, anchorItem.height)
@@ -29,6 +36,7 @@ Item {
             const topY = point.y - columnConfigPopup.height - 10
             columnConfigPopup.y = Math.max(margin, Math.min(maxY, topY))
         }
+        root.debugLog("INFO", "Open column config for slot " + slot + " (" + root.app.bomModel.visibleHeaderAt(slot) + ")")
         columnConfigPopup.open()
     }
 
@@ -83,8 +91,10 @@ Item {
         const saved = root.app.loadBomWidthRatios(layoutKey())
         if (saved && saved.length === count) {
             customRatios = saved
+            root.debugLog("INFO", "Load custom ratios from settings, slots=" + count)
         } else {
             customRatios = []
+            root.debugLog("WARNING", "No saved custom ratios matched current layout, reset to auto")
         }
         ensureCustomRatios()
         tableView.forceLayout()
@@ -94,13 +104,19 @@ Item {
     function persistCustomRatios() {
         ensureCustomRatios()
         root.app.saveBomWidthRatios(layoutKey(), customRatios)
+        root.debugLog("INFO", "Persist custom ratios: " + JSON.stringify(customRatios))
     }
 
     function setSlotRatio(slot, ratio) {
+        if (slot < 0 || slot >= root.app.bomModel.visibleSlotCount()) {
+            root.debugLog("WARNING", "Set slot ratio rejected: invalid slot " + slot)
+            return
+        }
         ensureCustomRatios()
         const next = customRatios.slice()
-        next[slot] = Math.max(0.4, Math.min(3.0, ratio))
+        next[slot] = Math.max(0.2, Math.min(6.0, ratio))
         customRatios = next
+        root.debugLog("INFO", "Set ratio for slot " + slot + " to " + next[slot].toFixed(2))
         persistCustomRatios()
         tableView.forceLayout()
         header.forceLayout()
@@ -118,17 +134,18 @@ Item {
         const spacingTotal = (count - 1) * tableView.columnSpacing
         const available = Math.max(0, total - spacingTotal)
 
-        const minTotal = count * root.minColumnWidth
-        if (available <= minTotal) {
-            return Math.max(80, Math.floor(available / count))
-        }
-
         let ratioSum = 0.0
         for (let index = 0; index < count; ++index) {
             ratioSum += root.slotRatio(index)
         }
         if (ratioSum <= 0.0001) {
-            return Math.floor(available / count)
+            return Math.max(40, Math.floor(available / count))
+        }
+
+        const minTotal = count * root.minColumnWidth
+        if (available <= minTotal) {
+            const weightedTight = Math.floor(available * (root.slotRatio(slot) / ratioSum))
+            return Math.max(40, weightedTight)
         }
 
         const extra = available - minTotal
@@ -137,7 +154,12 @@ Item {
     }
 
     function toggleSort(slot) {
+        if (slot < 0 || slot >= root.app.bomModel.visibleSlotCount()) {
+            root.debugLog("WARNING", "Sort rejected: invalid slot " + slot)
+            return
+        }
         ensureSortState()
+        root.debugLog("INFO", "Sort slot " + slot + ", ascending=" + slotAscending[slot])
         root.app.bomModel.sortByVisibleColumn(slot, slotAscending[slot])
         slotAscending[slot] = !slotAscending[slot]
     }
@@ -145,6 +167,7 @@ Item {
     Component.onCompleted: {
         ensureSortState()
         restoreCustomRatios()
+        root.debugLog("INFO", "BomPane initialized")
     }
 
     onWidthBucketChanged: restoreCustomRatios()
@@ -154,9 +177,11 @@ Item {
         function onModelReset() {
             root.ensureSortState()
             root.restoreCustomRatios()
+            root.debugLog("INFO", "BOM model reset")
         }
         function onHeaderDataChanged() {
             root.restoreCustomRatios()
+            root.debugLog("INFO", "BOM header changed")
         }
     }
 
@@ -164,6 +189,7 @@ Item {
         id: columnConfigPopup
         property int slot: -1
         width: 300
+        height: Math.min(root.popupMaxHeight, contentColumn.implicitHeight + 20)
         modal: false
         focus: true
         padding: 10
@@ -175,6 +201,7 @@ Item {
         }
 
         ColumnLayout {
+            id: contentColumn
             anchors.fill: parent
             spacing: 8
 
@@ -200,6 +227,11 @@ Item {
                     Layout.fillWidth: true
                     enabled: root.app.bomModel.visibleSlotCount() > 1
                     onClicked: {
+                        if (!enabled) {
+                            root.debugLog("ERROR", "Delete column failed: at least one visible column is required")
+                            return
+                        }
+                        root.debugLog("INFO", "Delete visible slot " + columnConfigPopup.slot)
                         root.app.bomModel.removeVisibleSlot(columnConfigPopup.slot)
                         root.ensureSortState()
                         root.restoreCustomRatios()
@@ -210,6 +242,7 @@ Item {
                     themeColors: root.themeColors
                     Layout.fillWidth: true
                     onClicked: {
+                        root.debugLog("INFO", "Insert slot at left of " + columnConfigPopup.slot)
                         root.app.bomModel.insertVisibleSlot(columnConfigPopup.slot)
                         root.ensureSortState()
                         root.restoreCustomRatios()
@@ -220,6 +253,7 @@ Item {
                     themeColors: root.themeColors
                     Layout.fillWidth: true
                     onClicked: {
+                        root.debugLog("INFO", "Insert slot at right of " + columnConfigPopup.slot)
                         root.app.bomModel.insertVisibleSlot(columnConfigPopup.slot + 1)
                         root.ensureSortState()
                         root.restoreCustomRatios()
@@ -235,7 +269,7 @@ Item {
 
             ScrollView {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 140
+                Layout.preferredHeight: Math.max(110, Math.min(200, root.height * 0.26))
                 clip: true
 
                 Column {
@@ -261,6 +295,8 @@ Item {
                                 text: fieldOption.modelData
                                 checked: fieldOption.modelData === root.app.bomModel.visibleHeaderAt(columnConfigPopup.slot)
                                 onClicked: {
+                                    const before = root.app.bomModel.visibleHeaderAt(columnConfigPopup.slot)
+                                    root.debugLog("INFO", "Change header slot " + columnConfigPopup.slot + ": " + before + " -> " + fieldOption.modelData)
                                     root.app.bomModel.setVisibleHeaderAt(columnConfigPopup.slot, fieldOption.modelData)
                                     root.restoreCustomRatios()
                                 }
@@ -278,10 +314,12 @@ Item {
 
             Slider {
                 Layout.fillWidth: true
-                from: 0.4
-                to: 3.0
-                stepSize: 0.05
+                from: 0.2
+                to: 6.0
+                stepSize: 0.1
                 value: root.slotRatio(columnConfigPopup.slot)
+                palette.accent: root.ratioAccentColor
+                palette.highlight: root.ratioAccentColor
                 onValueChanged: {
                     if (pressed) {
                         root.setSlotRatio(columnConfigPopup.slot, value)
@@ -308,6 +346,7 @@ Item {
                     text: "重置"
                     themeColors: root.themeColors
                     onClicked: {
+                        root.debugLog("INFO", "Reset ratio for slot " + columnConfigPopup.slot)
                         root.setSlotRatio(columnConfigPopup.slot, root.slotWeight(columnConfigPopup.slot))
                     }
                 }
@@ -414,10 +453,14 @@ Item {
                     clip: true
                     model: root.app.bomModel
                     boundsBehavior: Flickable.StopAtBounds
-                    interactive: false
+                    interactive: true
+                    flickableDirection: Flickable.VerticalFlick
                     rowSpacing: 0
                     columnSpacing: 0
                     columnWidthProvider: function(column) { return root.slotWidth(column) }
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                    }
 
                     delegate: Rectangle {
                         id: cell
@@ -439,6 +482,42 @@ Item {
                         }
                     }
                 }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                width: 14
+                height: 14
+                radius: 10
+                color: root.themeColors.card
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                width: 14
+                height: 14
+                radius: 10
+                color: root.themeColors.card
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+                width: 14
+                height: 14
+                radius: 10
+                color: root.themeColors.card
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                width: 14
+                height: 14
+                radius: 10
+                color: root.themeColors.card
             }
         }
 

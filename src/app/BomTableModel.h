@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QAbstractTableModel>
 
@@ -6,6 +6,8 @@ class BomTableModel : public QAbstractTableModel
 {
     Q_OBJECT
     Q_PROPERTY(QString filterKeyword READ filterKeyword WRITE setFilterKeyword NOTIFY filterKeywordChanged)
+    Q_PROPERTY(QString projectFilter READ projectFilter WRITE setProjectFilter NOTIFY projectFilterChanged)
+    Q_PROPERTY(QString typeFilter READ typeFilter WRITE setTypeFilter NOTIFY typeFilterChanged)
 
 public:
     explicit BomTableModel(QObject *parent = nullptr);
@@ -22,14 +24,24 @@ public:
     Q_INVOKABLE void sortByVisibleColumn(int slot, bool ascending);
     Q_INVOKABLE void insertVisibleSlot(int slot);
     Q_INVOKABLE void removeVisibleSlot(int slot);
+    Q_INVOKABLE QStringList distinctValuesByHeaderAliases(const QStringList &aliases, int fallbackSourceColumn = -1) const;
 
     QString filterKeyword() const;
     Q_INVOKABLE void setFilterKeyword(const QString &keyword);
+    QString projectFilter() const;
+    Q_INVOKABLE void setProjectFilter(const QString &project);
+    QString typeFilter() const;
+    Q_INVOKABLE void setTypeFilter(const QString &typeValue);
+    Q_INVOKABLE void clearTypeFilter();
+    Q_INVOKABLE void removeRowsByProject(const QString &projectName);
 
     void setSourceData(const QStringList &headers, const QList<QStringList> &rows);
+    Q_INVOKABLE bool appendRows(const QStringList &headers, const QList<QStringList> &rows);
 
 signals:
     void filterKeywordChanged();
+    void projectFilterChanged();
+    void typeFilterChanged();
 
 private:
     void rebuildFilteredRows();
@@ -39,4 +51,6 @@ private:
     QList<QStringList> m_filteredRows;
     QList<int> m_visibleSourceColumns;
     QString m_filterKeyword;
+    QString m_projectFilter;
+    QString m_typeFilter;
 };

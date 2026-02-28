@@ -31,6 +31,7 @@ public:
 
     Q_INVOKABLE void cycleTheme();
     Q_INVOKABLE void importLichuang(const QUrl &fileUrl, const QString &projectName);
+    Q_INVOKABLE bool deleteProject(int index);
     Q_INVOKABLE void notify(const QString &message);
     Q_INVOKABLE QVariantList loadBomWidthRatios(const QString &layoutHash) const;
     Q_INVOKABLE void saveBomWidthRatios(const QString &layoutHash, const QVariantList &ratios);

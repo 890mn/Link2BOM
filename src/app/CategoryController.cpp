@@ -3,7 +3,10 @@
 CategoryController::CategoryController(QObject *parent)
     : QObject(parent)
 {
-    m_model.setStringList({QStringLiteral("电阻电容"), QStringLiteral("芯片 IC"), QStringLiteral("连接器"), QStringLiteral("机械件")});
+    m_model.setStringList({QStringLiteral("R/C"),
+                           QStringLiteral("IC"),
+                           QStringLiteral("Connector"),
+                           QStringLiteral("Mechanical")});
 }
 
 QAbstractItemModel *CategoryController::model()
@@ -37,6 +40,17 @@ bool CategoryController::renameCategory(int index, const QString &name)
         return false;
     }
     list[index] = n;
+    m_model.setStringList(list);
+    return true;
+}
+
+bool CategoryController::removeCategory(int index)
+{
+    QStringList list = m_model.stringList();
+    if (index < 0 || index >= list.size()) {
+        return false;
+    }
+    list.removeAt(index);
     m_model.setStringList(list);
     return true;
 }

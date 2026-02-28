@@ -14,6 +14,7 @@ public:
     QAbstractItemModel *model();
     Q_INVOKABLE bool addCategory(const QString &name);
     Q_INVOKABLE bool renameCategory(int index, const QString &name);
+    Q_INVOKABLE bool removeCategory(int index);
 
 private:
     QStringListModel m_model;

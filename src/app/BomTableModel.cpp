@@ -1,5 +1,6 @@
-﻿#include "BomTableModel.h"
+#include "BomTableModel.h"
 
+#include <QSet>
 #include <algorithm>
 
 BomTableModel::BomTableModel(QObject *parent)
@@ -128,6 +129,52 @@ void BomTableModel::removeVisibleSlot(int slot)
     endResetModel();
 }
 
+QStringList BomTableModel::distinctValuesByHeaderAliases(const QStringList &aliases, int fallbackSourceColumn) const
+{
+    if (m_sourceHeaders.isEmpty() || aliases.isEmpty()) {
+        return {};
+    }
+
+    int sourceIndex = -1;
+    for (int i = 0; i < m_sourceHeaders.size(); ++i) {
+        const QString header = m_sourceHeaders[i].trimmed().toLower();
+        for (const QString &aliasRaw : aliases) {
+            const QString alias = aliasRaw.trimmed().toLower();
+            if (!alias.isEmpty() && (header == alias || header.contains(alias))) {
+                sourceIndex = i;
+                break;
+            }
+        }
+        if (sourceIndex >= 0) {
+            break;
+        }
+    }
+
+    if (sourceIndex < 0) {
+        sourceIndex = fallbackSourceColumn;
+    }
+    if (sourceIndex < 0 || sourceIndex >= m_sourceHeaders.size()) {
+        return {};
+    }
+
+    QSet<QString> uniq;
+    for (const QStringList &row : m_filteredRows) {
+        if (sourceIndex >= row.size()) {
+            continue;
+        }
+        const QString value = row[sourceIndex].trimmed();
+        if (!value.isEmpty()) {
+            uniq.insert(value);
+        }
+    }
+
+    QStringList values = uniq.values();
+    std::sort(values.begin(), values.end(), [](const QString &a, const QString &b) {
+        return QString::localeAwareCompare(a, b) < 0;
+    });
+    return values;
+}
+
 QString BomTableModel::filterKeyword() const
 {
     return m_filterKeyword;
@@ -141,6 +188,61 @@ void BomTableModel::setFilterKeyword(const QString &keyword)
 
     m_filterKeyword = keyword;
     emit filterKeywordChanged();
+    rebuildFilteredRows();
+}
+
+QString BomTableModel::projectFilter() const
+{
+    return m_projectFilter;
+}
+
+void BomTableModel::setProjectFilter(const QString &project)
+{
+    if (project == m_projectFilter) {
+        return;
+    }
+
+    m_projectFilter = project;
+    emit projectFilterChanged();
+    rebuildFilteredRows();
+}
+
+QString BomTableModel::typeFilter() const
+{
+    return m_typeFilter;
+}
+
+void BomTableModel::setTypeFilter(const QString &typeValue)
+{
+    const QString normalized = typeValue.trimmed();
+    if (normalized == m_typeFilter) {
+        return;
+    }
+
+    m_typeFilter = normalized;
+    emit typeFilterChanged();
+    rebuildFilteredRows();
+}
+
+void BomTableModel::clearTypeFilter()
+{
+    setTypeFilter(QString());
+}
+
+void BomTableModel::removeRowsByProject(const QString &projectName)
+{
+    const QString key = projectName.trimmed();
+    if (key.isEmpty()) {
+        return;
+    }
+
+    beginResetModel();
+    auto endIt = std::remove_if(m_sourceRows.begin(), m_sourceRows.end(), [&key](const QStringList &row) {
+        return !row.isEmpty() && row.first().trimmed() == key;
+    });
+    m_sourceRows.erase(endIt, m_sourceRows.end());
+    endResetModel();
+
     rebuildFilteredRows();
 }
 
@@ -158,16 +260,71 @@ void BomTableModel::setSourceData(const QStringList &headers, const QList<QStrin
     rebuildFilteredRows();
 }
 
+bool BomTableModel::appendRows(const QStringList &headers, const QList<QStringList> &rows)
+{
+    if (headers.isEmpty()) {
+        return false;
+    }
+
+    if (m_sourceHeaders.isEmpty()) {
+        setSourceData(headers, rows);
+        return true;
+    }
+
+    if (m_sourceHeaders != headers) {
+        return false;
+    }
+
+    beginResetModel();
+    for (const QStringList &row : rows) {
+        m_sourceRows.append(row);
+    }
+    endResetModel();
+
+    rebuildFilteredRows();
+    return true;
+}
+
 void BomTableModel::rebuildFilteredRows()
 {
     beginResetModel();
     m_filteredRows.clear();
 
     const QString key = m_filterKeyword.trimmed();
+    const QString project = m_projectFilter.trimmed();
+    const QString typeFilterValue = m_typeFilter.trimmed();
+    const bool hasTypeFilter = !typeFilterValue.isEmpty();
+    const bool allProjects = project.isEmpty()
+        || project.compare(QStringLiteral("All Projects"), Qt::CaseInsensitive) == 0
+        || project == QStringLiteral("全部项目");
+
     if (key.isEmpty()) {
-        m_filteredRows = m_sourceRows;
+        if (allProjects) {
+            m_filteredRows = m_sourceRows;
+        } else {
+            for (const QStringList &row : m_sourceRows) {
+                if (!row.isEmpty() && row.first().trimmed() == project) {
+                    if (hasTypeFilter) {
+                        if (row.size() <= 5 || !row[5].contains(typeFilterValue, Qt::CaseInsensitive)) {
+                            continue;
+                        }
+                    }
+                    m_filteredRows.append(row);
+                }
+            }
+        }
     } else {
         for (const QStringList &row : m_sourceRows) {
+            if (!allProjects) {
+                if (row.isEmpty() || row.first().trimmed() != project) {
+                    continue;
+                }
+            }
+            if (hasTypeFilter) {
+                if (row.size() <= 5 || !row[5].contains(typeFilterValue, Qt::CaseInsensitive)) {
+                    continue;
+                }
+            }
             bool matched = false;
             for (const QString &cell : row) {
                 if (cell.contains(key, Qt::CaseInsensitive)) {
