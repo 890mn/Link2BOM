@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractTableModel>
+#include <QVariantList>
 
 class BomTableModel : public QAbstractTableModel
 {
@@ -34,6 +35,7 @@ public:
     Q_INVOKABLE void setTypeFilter(const QString &typeValue);
     Q_INVOKABLE void clearTypeFilter();
     Q_INVOKABLE void removeRowsByProject(const QString &projectName);
+    Q_INVOKABLE QVariantList analyzeDifferences(const QString &keyword, const QString &groupMode) const;
 
     void setSourceData(const QStringList &headers, const QList<QStringList> &rows);
     Q_INVOKABLE bool appendRows(const QStringList &headers, const QList<QStringList> &rows);

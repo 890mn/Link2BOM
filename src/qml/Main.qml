@@ -28,6 +28,11 @@ ApplicationWindow {
     property bool showWarningLogs: true
     property bool showErrorLogs: true
     property string uiLanguage: uiSettings.language
+    property string bomSearchText: ""
+    property string diffSearchText: ""
+    property string diffGroupMode: "part"
+    property var diffItems: []
+    property bool syncingTopSearch: false
     property var textZh: ({
         "dialog.selectImportProject": "选择导入项目",
         "dialog.newProjectOr": "或新建项目",
@@ -48,6 +53,15 @@ ApplicationWindow {
         "common.clear": "清空",
         "diff.title": "差异分析",
         "diff.todo": "后续接入版本对比、替代料推荐、成本变化趋势。",
+        "diff.search.placeholder": "搜索差异（关键料号/字段/值）",
+        "diff.group.by": "分组",
+        "diff.group.part": "按料号",
+        "diff.group.name": "按名称",
+        "diff.group.package": "按封装",
+        "diff.group.project": "按项目",
+        "diff.result.count": "差异条目",
+        "diff.changed.fields": "差异字段",
+        "diff.noresult": "未发现差异条目",
         "debug.console": "调试控制台",
         "debug.clear": "清空",
         "settings.title": "设置",
@@ -111,6 +125,15 @@ ApplicationWindow {
         "common.clear": "Clear",
         "diff.title": "Diff Analysis",
         "diff.todo": "Version diff, alternates suggestion, and cost trend will be added later.",
+        "diff.search.placeholder": "Search diffs (key part/field/value)",
+        "diff.group.by": "Group By",
+        "diff.group.part": "By Part",
+        "diff.group.name": "By Name",
+        "diff.group.package": "By Package",
+        "diff.group.project": "By Project",
+        "diff.result.count": "Diff Items",
+        "diff.changed.fields": "Changed Fields",
+        "diff.noresult": "No diff items found",
         "debug.console": "Debug Console",
         "debug.clear": "Clear",
         "settings.title": "Settings",
@@ -232,6 +255,9 @@ ApplicationWindow {
     function logInfo(message) { root.appCtx.logInfo(String(message)) }
     function logWarning(message) { root.appCtx.logWarning(String(message)) }
     function logError(message) { root.appCtx.logError(String(message)) }
+    function refreshDiffAnalysis() {
+        diffItems = root.appCtx.bomModel.analyzeDifferences(diffSearchText, diffGroupMode)
+    }
 
     onShowInfoLogsChanged: rebuildDebugLogText()
     onShowWarningLogsChanged: rebuildDebugLogText()
@@ -549,6 +575,20 @@ ApplicationWindow {
         }
     }
 
+    Connections {
+        target: root.appCtx.bomModel
+        function onModelReset() {
+            if (tabs.currentIndex === 1) {
+                root.refreshDiffAnalysis()
+            }
+        }
+        function onHeaderDataChanged() {
+            if (tabs.currentIndex === 1) {
+                root.refreshDiffAnalysis()
+            }
+        }
+    }
+
     // 1ST REC
     RowLayout {
         anchors.fill: parent
@@ -685,6 +725,12 @@ ApplicationWindow {
                             }
                             onCurrentIndexChanged: {
                                 root.logInfo("View switched: " + (currentIndex === 0 ? "BOM" : "Diff"))
+                                root.syncingTopSearch = true
+                                globalSearch.text = currentIndex === 0 ? root.bomSearchText : root.diffSearchText
+                                root.syncingTopSearch = false
+                                if (currentIndex === 1) {
+                                    root.refreshDiffAnalysis()
+                                }
                             }
 
                             TabButton {
@@ -755,14 +801,24 @@ ApplicationWindow {
                             anchors.fill: parent
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
-                            placeholderText: root.tx("search.placeholder")
+                            placeholderText: tabs.currentIndex === 0 ? root.tx("search.placeholder") : root.tx("diff.search.placeholder")
                             color: root.textColor
                             placeholderTextColor: root.mutedTextColor
                             verticalAlignment: TextInput.AlignVCenter
                             background: Item {}
                             onTextChanged: {
-                                root.appCtx.bomModel.setFilterKeyword(text)
-                                root.logInfo("Global search changed: \"" + text + "\"")
+                                if (root.syncingTopSearch) {
+                                    return
+                                }
+                                if (tabs.currentIndex === 0) {
+                                    root.bomSearchText = text
+                                    root.appCtx.bomModel.setFilterKeyword(text)
+                                    root.logInfo("Global BOM search changed: \"" + text + "\"")
+                                } else {
+                                    root.diffSearchText = text
+                                    root.refreshDiffAnalysis()
+                                    root.logInfo("Diff search changed: \"" + text + "\"")
+                                }
                             }
                         }
                     }
@@ -776,22 +832,211 @@ ApplicationWindow {
                         implicitWidth: 78
                         onClicked: {
                             globalSearch.clear()
-                            root.appCtx.bomModel.setFilterKeyword("")
-                            root.logInfo("Global search cleared")
+                            if (tabs.currentIndex === 0) {
+                                root.bomSearchText = ""
+                                root.appCtx.bomModel.setFilterKeyword("")
+                                root.logInfo("Global BOM search cleared")
+                            } else {
+                                root.diffSearchText = ""
+                                root.refreshDiffAnalysis()
+                                root.logInfo("Diff search cleared")
+                            }
                         }
                     }
                 }
             }
 
-            BomPane {
+            StackLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                app: root.appCtx
-                themeColors: root.themeColorsObj()
-                uiLanguage: root.uiLanguage
-                tx: root.tx
-                onDebugLog: function(level, message) {
-                    root.appendDebugLog(level, "BOM: " + message)
+                currentIndex: tabs.currentIndex
+
+                BomPane {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    app: root.appCtx
+                    themeColors: root.themeColorsObj()
+                    uiLanguage: root.uiLanguage
+                    tx: root.tx
+                    onDebugLog: function(level, message) {
+                        root.appendDebugLog(level, "BOM: " + message)
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 8
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 50
+                            radius: 12
+                            color: root.cardColor
+                            border.color: root.borderColor
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                spacing: 10
+
+                                Label {
+                                    text: root.tx("diff.group.by")
+                                    color: root.mutedTextColor
+                                }
+
+                                RowLayout {
+                                    spacing: 6
+
+                                    Repeater {
+                                        model: [
+                                            { "label": root.tx("diff.group.part"), "value": "part" },
+                                            { "label": root.tx("diff.group.name"), "value": "name" },
+                                            { "label": root.tx("diff.group.package"), "value": "package" },
+                                            { "label": root.tx("diff.group.project"), "value": "project" }
+                                        ]
+
+                                        delegate: AppButton {
+                                            required property var modelData
+                                            themeColors: root.themeColorsObj()
+                                            text: modelData.label
+                                            accent: root.diffGroupMode === modelData.value
+                                            implicitHeight: 30
+                                            cornerRadius: 8
+                                            onClicked: {
+                                                if (root.diffGroupMode !== modelData.value) {
+                                                    root.diffGroupMode = modelData.value
+                                                    root.refreshDiffAnalysis()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                Label {
+                                    text: root.tx("diff.result.count") + ": " + root.diffItems.length
+                                    color: root.textColor
+                                    font.bold: true
+                                }
+                            }
+                        }
+
+                        ListView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+                            spacing: 8
+                            model: root.diffItems
+
+                            delegate: Rectangle {
+                                required property var modelData
+                                width: ListView.view.width
+                                radius: 12
+                                color: root.cardColor
+                                border.color: Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.45)
+                                implicitHeight: itemColumn.implicitHeight + 16
+
+                                ColumnLayout {
+                                    id: itemColumn
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    spacing: 6
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 8
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: modelData.key
+                                            color: root.textColor
+                                            elide: Text.ElideRight
+                                            font.bold: true
+                                        }
+
+                                        Rectangle {
+                                            radius: 8
+                                            color: Qt.rgba(239/255, 68/255, 68/255, 0.15)
+                                            border.color: "#EF4444"
+                                            implicitHeight: 24
+                                            implicitWidth: diffBadge.implicitWidth + 14
+
+                                            Label {
+                                                id: diffBadge
+                                                anchors.centerIn: parent
+                                                text: root.tx("diff.changed.fields") + ": " + modelData.changedFieldCount
+                                                color: "#EF4444"
+                                                font.pixelSize: 12
+                                                font.bold: true
+                                            }
+                                        }
+                                    }
+
+                                    Repeater {
+                                        model: modelData.fieldDetails
+
+                                        delegate: RowLayout {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            spacing: 8
+
+                                            Label {
+                                                Layout.preferredWidth: 140
+                                                Layout.maximumWidth: 180
+                                                text: modelData.field
+                                                color: root.primaryColor
+                                                font.bold: true
+                                                elide: Text.ElideRight
+                                            }
+
+                                            Flow {
+                                                Layout.fillWidth: true
+                                                spacing: 6
+
+                                                Repeater {
+                                                    model: modelData.values
+
+                                                    delegate: Rectangle {
+                                                        required property string modelData
+                                                        radius: 7
+                                                        color: root.subtleColor
+                                                        border.color: root.borderColor
+                                                        implicitHeight: 22
+                                                        implicitWidth: tokenText.implicitWidth + 12
+
+                                                        Label {
+                                                            id: tokenText
+                                                            anchors.centerIn: parent
+                                                            text: modelData
+                                                            color: root.textColor
+                                                            font.pixelSize: 12
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            ScrollBar.vertical: ScrollBar {
+                                policy: ScrollBar.AsNeeded
+                            }
+                        }
+
+                        Label {
+                            Layout.alignment: Qt.AlignHCenter
+                            visible: root.diffItems.length === 0
+                            text: root.tx("diff.noresult")
+                            color: root.mutedTextColor
+                        }
+                    }
                 }
             }
         }

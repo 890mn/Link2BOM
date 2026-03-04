@@ -1,7 +1,25 @@
 #include "BomTableModel.h"
 
+#include <QHash>
 #include <QSet>
+#include <QVariantMap>
 #include <algorithm>
+
+namespace {
+int findSourceColumnByAliases(const QStringList &headers, const QStringList &aliases, int fallback = -1)
+{
+    for (int i = 0; i < headers.size(); ++i) {
+        const QString header = headers[i].trimmed().toLower();
+        for (const QString &aliasRaw : aliases) {
+            const QString alias = aliasRaw.trimmed().toLower();
+            if (!alias.isEmpty() && (header == alias || header.contains(alias))) {
+                return i;
+            }
+        }
+    }
+    return fallback;
+}
+}
 
 BomTableModel::BomTableModel(QObject *parent)
     : QAbstractTableModel(parent)
@@ -244,6 +262,144 @@ void BomTableModel::removeRowsByProject(const QString &projectName)
     endResetModel();
 
     rebuildFilteredRows();
+}
+
+QVariantList BomTableModel::analyzeDifferences(const QString &keyword, const QString &groupMode) const
+{
+    QVariantList result;
+    if (m_sourceHeaders.isEmpty() || m_filteredRows.isEmpty()) {
+        return result;
+    }
+
+    int keyColumn = -1;
+    const QString mode = groupMode.trimmed().toLower();
+    if (mode == QStringLiteral("project")) {
+        keyColumn = 0;
+    } else if (mode == QStringLiteral("name")) {
+        keyColumn = findSourceColumnByAliases(m_sourceHeaders, {"name", "description", "item"}, 5);
+    } else if (mode == QStringLiteral("package")) {
+        keyColumn = findSourceColumnByAliases(m_sourceHeaders, {"package", "footprint"}, 4);
+    } else {
+        keyColumn = findSourceColumnByAliases(m_sourceHeaders, {"part", "pn", "mpn", "item"}, 3);
+    }
+
+    if (keyColumn < 0 || keyColumn >= m_sourceHeaders.size()) {
+        return result;
+    }
+
+    QHash<QString, QList<int>> groupRows;
+    for (int rowIndex = 0; rowIndex < m_filteredRows.size(); ++rowIndex) {
+        const QStringList &row = m_filteredRows[rowIndex];
+        if (keyColumn >= row.size()) {
+            continue;
+        }
+        const QString key = row[keyColumn].trimmed();
+        if (!key.isEmpty()) {
+            groupRows[key].append(rowIndex);
+        }
+    }
+
+    struct DiffEntry {
+        QString key;
+        int rowCount = 0;
+        int changedFieldCount = 0;
+        QString changedFields;
+        QString details;
+        QVariantList fieldDetails;
+    };
+    QList<DiffEntry> entries;
+
+    const QString keywordKey = keyword.trimmed();
+    for (auto it = groupRows.cbegin(); it != groupRows.cend(); ++it) {
+        const QList<int> &rows = it.value();
+        if (rows.size() < 2) {
+            continue;
+        }
+
+        QStringList changedFields;
+        QStringList detailParts;
+        QVariantList fieldDetails;
+        for (int col = 0; col < m_sourceHeaders.size(); ++col) {
+            if (col == keyColumn || col == 0) {
+                continue;
+            }
+            QSet<QString> uniq;
+            for (int idx : rows) {
+                const QStringList &r = m_filteredRows[idx];
+                if (col < r.size()) {
+                    const QString value = r[col].trimmed();
+                    if (!value.isEmpty()) {
+                        uniq.insert(value);
+                    }
+                }
+            }
+            if (uniq.size() > 1) {
+                changedFields.append(m_sourceHeaders[col]);
+                QStringList values = uniq.values();
+                std::sort(values.begin(), values.end(), [](const QString &a, const QString &b) {
+                    return QString::localeAwareCompare(a, b) < 0;
+                });
+                if (values.size() > 3) {
+                    values = values.mid(0, 3);
+                    values.append(QStringLiteral("..."));
+                }
+                QVariantMap fieldItem;
+                fieldItem.insert(QStringLiteral("field"), m_sourceHeaders[col]);
+                fieldItem.insert(QStringLiteral("values"), QVariant::fromValue(values));
+                fieldDetails.append(fieldItem);
+                detailParts.append(m_sourceHeaders[col] + QStringLiteral(": ") + values.join(QStringLiteral(" | ")));
+            }
+        }
+
+        if (changedFields.isEmpty()) {
+            continue;
+        }
+
+        DiffEntry entry;
+        entry.key = it.key();
+        entry.rowCount = rows.size();
+        entry.changedFieldCount = changedFields.size();
+        entry.changedFields = changedFields.join(QStringLiteral(", "));
+        entry.details = detailParts.join(QStringLiteral(" ; "));
+        entry.fieldDetails = fieldDetails;
+
+        if (!keywordKey.isEmpty()) {
+            const bool matched = entry.key.contains(keywordKey, Qt::CaseInsensitive)
+                || entry.changedFields.contains(keywordKey, Qt::CaseInsensitive)
+                || entry.details.contains(keywordKey, Qt::CaseInsensitive);
+            if (!matched) {
+                continue;
+            }
+        }
+
+        entries.append(entry);
+    }
+
+    std::sort(entries.begin(), entries.end(), [](const DiffEntry &a, const DiffEntry &b) {
+        if (a.changedFieldCount != b.changedFieldCount) {
+            return a.changedFieldCount > b.changedFieldCount;
+        }
+        if (a.rowCount != b.rowCount) {
+            return a.rowCount > b.rowCount;
+        }
+        return QString::localeAwareCompare(a.key, b.key) < 0;
+    });
+
+    const int maxItems = 300;
+    const int count = qMin(entries.size(), maxItems);
+    for (int i = 0; i < count; ++i) {
+        const DiffEntry &entry = entries[i];
+        QVariantMap map;
+        map.insert(QStringLiteral("key"), entry.key);
+        map.insert(QStringLiteral("rowCount"), entry.rowCount);
+        map.insert(QStringLiteral("changedFieldCount"), entry.changedFieldCount);
+        map.insert(QStringLiteral("changedFields"), entry.changedFields);
+        map.insert(QStringLiteral("details"), entry.details);
+        map.insert(QStringLiteral("fieldDetails"), entry.fieldDetails);
+        result.append(map);
+    }
+
+    return result;
 }
 
 void BomTableModel::setSourceData(const QStringList &headers, const QList<QStringList> &rows)
