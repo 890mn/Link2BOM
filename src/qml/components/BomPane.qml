@@ -143,8 +143,8 @@ Item {
 
     function slotWidth(slot) {
         const count = Math.max(1, root.app.bomModel.visibleSlotCount())
-        const total = Math.max(420, contentFrame.width)
-        const spacingTotal = (count - 1) * tableView.columnSpacing
+        const total = Math.max(0, Math.floor(contentFrame.width))
+        const spacingTotal = Math.max(0, (count - 1) * tableView.columnSpacing)
         const available = Math.max(0, total - spacingTotal)
 
         let ratioSum = 0.0
@@ -152,16 +152,32 @@ Item {
             ratioSum += root.slotRatio(index)
         }
         if (ratioSum <= 0.0001) {
-            return Math.max(40, Math.floor(available / count))
+            const base = Math.floor(available / count)
+            if (slot === count - 1) {
+                return Math.max(40, available - base * (count - 1))
+            }
+            return Math.max(40, base)
         }
 
-        const minTotal = count * root.minColumnWidth
-        if (available <= minTotal) {
-            const weightedTight = Math.floor(available * (root.slotRatio(slot) / ratioSum))
-            return Math.max(40, weightedTight)
+        let used = 0
+        if (slot === count - 1) {
+            for (let i = 0; i < count - 1; ++i) {
+                if (available <= count * root.minColumnWidth) {
+                    used += Math.max(40, Math.floor(available * (root.slotRatio(i) / ratioSum)))
+                } else {
+                    const extra = available - count * root.minColumnWidth
+                    const weighted = root.minColumnWidth + extra * (root.slotRatio(i) / ratioSum)
+                    used += Math.floor(weighted)
+                }
+            }
+            return Math.max(root.minColumnWidth, available - used)
         }
 
-        const extra = available - minTotal
+        if (available <= count * root.minColumnWidth) {
+            return Math.max(40, Math.floor(available * (root.slotRatio(slot) / ratioSum)))
+        }
+
+        const extra = available - count * root.minColumnWidth
         const weighted = root.minColumnWidth + extra * (root.slotRatio(slot) / ratioSum)
         return Math.floor(weighted)
     }
@@ -367,19 +383,13 @@ Item {
         }
     }
 
-    Rectangle {
+    Item {
         id: contentFrame
         anchors.fill: parent
-        radius: 12
-        color: "transparent"
-        border.width: 0
-        antialiasing: true
-        clip: true
-        layer.enabled: true
-        layer.smooth: true
 
         ColumnLayout {
             anchors.fill: parent
+            anchors.margins: 0
             spacing: 0
 
             HorizontalHeaderView {

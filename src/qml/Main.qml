@@ -241,8 +241,10 @@ ApplicationWindow {
     onDebugPanelVisibleChanged: {
         if (debugPanelVisible) {
             logInfo("Debug panel opened")
+            debugPopup.open()
         } else {
             logInfo("Debug panel closed")
+            debugPopup.close()
         }
     }
 
@@ -429,6 +431,103 @@ ApplicationWindow {
         }
     }
 
+    Popup {
+        id: debugPopup
+        width: Math.min(root.width - 40, 920)
+        height: Math.min(root.height - 60, 420)
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2)
+        modal: false
+        focus: true
+        padding: 10
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        onClosed: root.debugPanelVisible = false
+
+        background: Rectangle {
+            radius: 12
+            color: root.subtleColor
+            border.color: root.borderColor
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 6
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.tx("debug.console")
+                    color: root.textColor
+                    elide: Text.ElideRight
+                    font.bold: true
+                }
+
+                CheckBox {
+                    id: popupInfoLevelCheck
+                    text: "Info"
+                    checked: root.showInfoLogs
+                    onToggled: root.showInfoLogs = checked
+                }
+
+                CheckBox {
+                    id: popupWarningLevelCheck
+                    text: "Warning"
+                    checked: root.showWarningLogs
+                    onToggled: root.showWarningLogs = checked
+                }
+
+                CheckBox {
+                    id: popupErrorLevelCheck
+                    text: "Error"
+                    checked: root.showErrorLogs
+                    onToggled: root.showErrorLogs = checked
+                }
+
+                AppButton {
+                    themeColors: root.themeColorsObj()
+                    text: root.tx("debug.clear")
+                    implicitHeight: 28
+                    implicitWidth: 72
+                    onClicked: {
+                        root.debugEntries = []
+                        root.debugLogText = ""
+                        root.logInfo("Debug logs cleared")
+                    }
+                }
+            }
+
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+
+                TextArea {
+                    id: debugTextArea
+                    readOnly: true
+                    wrapMode: TextEdit.NoWrap
+                    textFormat: TextEdit.RichText
+                    text: root.debugLogText
+                    color: root.textColor
+                    selectionColor: root.primaryColor
+                    selectedTextColor: "#FFFFFF"
+                    font.pixelSize: 12
+                    background: Rectangle {
+                        color: Qt.rgba(root.cardColor.r, root.cardColor.g, root.cardColor.b, 0.65)
+                        radius: 8
+                        border.color: root.borderColor
+                    }
+
+                    onTextChanged: {
+                        cursorPosition = length
+                    }
+                }
+            }
+        }
+    }
+
     Connections {
         target: root.appCtx.logRelay
         function onEntryAdded(time, level, message) {
@@ -450,6 +549,7 @@ ApplicationWindow {
         }
     }
 
+    // 1ST REC
     RowLayout {
         anchors.fill: parent
         anchors.margins: 8
@@ -550,9 +650,16 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 50
 
+                TapHandler {
+                    acceptedButtons: Qt.LeftButton
+                    gesturePolicy: TapHandler.WithinBounds
+                    onLongPressed: {
+                        root.debugPanelVisible = !root.debugPanelVisible
+                    }
+                }
+
                 RowLayout {
                     anchors.fill: parent
-                    //anchors.margins: 4
                     spacing: 8
 
                     Rectangle {
@@ -676,206 +783,17 @@ ApplicationWindow {
                 }
             }
 
-            Rectangle {
+            BomPane {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: 12
-                color: root.cardColor
-                border.color: root.borderColor
-                clip: true
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
-
-                StackLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    currentIndex: tabs.currentIndex
-
-                    BomPane {
-                        app: root.appCtx
-                        themeColors: root.themeColorsObj()
-                        uiLanguage: root.uiLanguage
-                        tx: root.tx
-                        onDebugLog: function(level, message) {
-                            root.appendDebugLog(level, "BOM: " + message)
-                        }
-                    }
-
-                    Rectangle {
-                        color: root.cardColor
-                        border.color: root.borderColor
-                        radius: 12
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            Label { text: root.tx("diff.title"); font.bold: true; color: root.textColor }
-                            Label { text: root.tx("diff.todo"); color: root.mutedTextColor }
-                        }
-                    }
-                }
-
-                Rectangle {
-                    visible: root.debugPanelVisible
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 220
-                    radius: 12
-                    color: root.subtleColor
-                    border.color: root.borderColor
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 6
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-
-                            Label {
-                                Layout.fillWidth: true
-                                text: root.tx("debug.console")
-                                color: root.textColor
-                                elide: Text.ElideRight
-                                font.bold: true
-                            }
-
-                            CheckBox {
-                                id: infoLevelCheck
-                                text: "Info"
-                                checked: root.showInfoLogs
-                                implicitHeight: 28
-                                implicitWidth: 74
-                                leftPadding: 8
-                                rightPadding: 8
-                                onToggled: root.showInfoLogs = checked
-                                background: Rectangle {
-                                    radius: 8
-                                    border.color: infoLevelCheck.checked ? root.primaryColor : root.borderColor
-                                    color: infoLevelCheck.checked
-                                        ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.14)
-                                        : root.subtleColor
-                                }
-                                indicator: Rectangle {
-                                    implicitWidth: 0
-                                    implicitHeight: 0
-                                    visible: false
-                                }
-                                contentItem: Text {
-                                    text: infoLevelCheck.text
-                                    color: root.textColor
-                                    leftPadding: 0
-                                    verticalAlignment: Text.AlignVCenter
-                                    font.pixelSize: 12
-                                }
-                            }
-
-                            CheckBox {
-                                id: warningLevelCheck
-                                text: "Warning"
-                                checked: root.showWarningLogs
-                                implicitHeight: 28
-                                implicitWidth: 96
-                                leftPadding: 8
-                                rightPadding: 8
-                                onToggled: root.showWarningLogs = checked
-                                background: Rectangle {
-                                    radius: 8
-                                    border.color: warningLevelCheck.checked ? root.primaryColor : root.borderColor
-                                    color: warningLevelCheck.checked
-                                        ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.14)
-                                        : root.subtleColor
-                                }
-                                indicator: Rectangle {
-                                    implicitWidth: 0
-                                    implicitHeight: 0
-                                    visible: false
-                                }
-                                contentItem: Text {
-                                    text: warningLevelCheck.text
-                                    color: root.textColor
-                                    leftPadding: 0
-                                    verticalAlignment: Text.AlignVCenter
-                                    font.pixelSize: 12
-                                }
-                            }
-
-                            CheckBox {
-                                id: errorLevelCheck
-                                text: "Error"
-                                checked: root.showErrorLogs
-                                implicitHeight: 28
-                                implicitWidth: 82
-                                leftPadding: 8
-                                rightPadding: 8
-                                onToggled: root.showErrorLogs = checked
-                                background: Rectangle {
-                                    radius: 8
-                                    border.color: errorLevelCheck.checked ? root.primaryColor : root.borderColor
-                                    color: errorLevelCheck.checked
-                                        ? Qt.rgba(root.primaryColor.r, root.primaryColor.g, root.primaryColor.b, 0.14)
-                                        : root.subtleColor
-                                }
-                                indicator: Rectangle {
-                                    implicitWidth: 0
-                                    implicitHeight: 0
-                                    visible: false
-                                }
-                                contentItem: Text {
-                                    text: errorLevelCheck.text
-                                    color: root.textColor
-                                    leftPadding: 0
-                                    verticalAlignment: Text.AlignVCenter
-                                    font.pixelSize: 12
-                                }
-                            }
-
-                            AppButton {
-                                themeColors: root.themeColorsObj()
-                                text: root.tx("debug.clear")
-                                implicitHeight: 28
-                                implicitWidth: 72
-                                onClicked: {
-                                    root.debugEntries = []
-                                    root.debugLogText = ""
-                                    root.logInfo("Debug logs cleared")
-                                }
-                            }
-                        }
-
-                        ScrollView {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            clip: true
-
-                            TextArea {
-                                id: debugTextArea
-                                readOnly: true
-                                wrapMode: TextEdit.NoWrap
-                                textFormat: TextEdit.RichText
-                                text: root.debugLogText
-                                color: root.textColor
-                                selectionColor: root.primaryColor
-                                selectedTextColor: "#FFFFFF"
-                                font.pixelSize: 12
-                                background: Rectangle {
-                                    color: Qt.rgba(root.cardColor.r, root.cardColor.g, root.cardColor.b, 0.65)
-                                    radius: 8
-                                    border.color: root.borderColor
-                                }
-
-                                onTextChanged: {
-                                    cursorPosition = length
-                                }
-                            }
-                        }
-                    }
+                app: root.appCtx
+                themeColors: root.themeColorsObj()
+                uiLanguage: root.uiLanguage
+                tx: root.tx
+                onDebugLog: function(level, message) {
+                    root.appendDebugLog(level, "BOM: " + message)
                 }
             }
         }
     }
-}
 }
