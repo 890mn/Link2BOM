@@ -3,3 +3,5 @@ dist/
 .qtcreator/
 .qmlls.ini
 TODO.md
+.codex/
+.vscode/
