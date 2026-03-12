@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QObject>
 #include <QUrl>
@@ -9,6 +9,7 @@
 #include "CategoryController.h"
 #include "AppLogger.h"
 #include "DataIoController.h"
+#include "ArchiveController.h"
 #include "ProjectController.h"
 #include "ThemeController.h"
 
@@ -20,6 +21,7 @@ class AppController : public QObject
     Q_PROPERTY(CategoryController *categories READ categories CONSTANT)
     Q_PROPERTY(BomTableModel *bomModel READ bomModel CONSTANT)
     Q_PROPERTY(DataIoController *io READ io CONSTANT)
+    Q_PROPERTY(ArchiveController *archive READ archive CONSTANT)
     Q_PROPERTY(LogRelay *logRelay READ logRelay CONSTANT)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
 
@@ -31,6 +33,7 @@ public:
     CategoryController *categories();
     BomTableModel *bomModel();
     DataIoController *io();
+    ArchiveController *archive();
     LogRelay *logRelay();
     QString status() const;
 
@@ -56,7 +59,10 @@ private:
     CategoryController m_categories;
     BomTableModel m_bomModel;
     DataIoController m_io;
+    ArchiveController m_archive;
     LogRelay m_logRelay;
     QString m_status;
     QHash<QString, QVariantList> m_bomWidthRatiosByLayout;
 };
+
+

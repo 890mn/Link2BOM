@@ -1,4 +1,4 @@
-#include "ImportService.h"
+﻿#include "ImportService.h"
 #include "AppLogger.h"
 
 #include <QDir>
@@ -8,6 +8,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <optional>
+#include <algorithm>
 
 namespace {
 struct PythonCommand {
@@ -115,6 +116,38 @@ ImportResult ImportService::importLichuangSpreadsheet(const QString &filePath, c
     return result;
 }
 
+ImportResult ImportService::importGenericSpreadsheet(const QString &filePath, const QString &projectName) const
+{
+    AppLogger::info(QStringLiteral("Generic import request: file=%1, project=%2").arg(filePath, projectName));
+    ImportResult result;
+    if (filePath.isEmpty()) {
+        result.error = QStringLiteral("File path is empty.");
+        AppLogger::error(result.error);
+        return result;
+    }
+
+    QString csvPath = filePath;
+    if (!filePath.endsWith(QStringLiteral(".csv"), Qt::CaseInsensitive)) {
+        QString error;
+        if (!convertSpreadsheetToCsv(filePath, &csvPath, &error)) {
+            result.error = QStringLiteral("%1\nSee import log: %2").arg(error, AppLogger::logFilePath());
+            AppLogger::error(QStringLiteral("convertSpreadsheetToCsv failed: %1").arg(error));
+            return result;
+        }
+    }
+
+    result = parseGenericCsv(csvPath, projectName);
+    if (!result.ok) {
+        AppLogger::error(QStringLiteral("parseGenericCsv failed: %1").arg(result.error));
+        result.error = QStringLiteral("%1\nSee import log: %2").arg(result.error, AppLogger::logFilePath());
+    } else {
+        AppLogger::info(QStringLiteral("Generic import success: file=%1 rows=%2 project=%3")
+                            .arg(filePath)
+                            .arg(result.rows.size())
+                            .arg(projectName));
+    }
+    return result;
+}
 ImportResult ImportService::parseLichuangCsv(const QString &csvPath, const QString &projectName) const
 {
     ImportResult result;
@@ -274,6 +307,169 @@ ImportResult ImportService::parseLichuangCsv(const QString &csvPath, const QStri
                       QStringLiteral("\u8ba2\u8d2d\u6570\u91cf\uff08\u4fee\u6539\u540e\uff09"),
                       QStringLiteral("\u5546\u54c1\u5355\u4ef7"),
                       QStringLiteral("\u5546\u54c1\u91d1\u989d")};
+    result.rows = rows;
+    return result;
+}
+
+ImportResult ImportService::parseGenericCsv(const QString &csvPath, const QString &projectName) const
+{
+    ImportResult result;
+
+    QFile file(csvPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        result.error = QStringLiteral("Cannot open CSV file: %1").arg(csvPath);
+        return result;
+    }
+
+    const QByteArray raw = file.readAll();
+    if (raw.isEmpty()) {
+        result.error = QStringLiteral("CSV file is empty: %1").arg(csvPath);
+        return result;
+    }
+
+    const auto parseByText = [this](const QString &text) {
+        QList<QStringList> rows;
+        const QStringList lines = text.split(QRegularExpression(QStringLiteral("\r?\n")));
+        rows.reserve(lines.size());
+        for (const QString &line : lines) {
+            rows.append(parseCsvLine(line));
+        }
+        return rows;
+    };
+
+    const QString textUtf8 = QString::fromUtf8(raw);
+    const QString textLocal = QString::fromLocal8Bit(raw);
+
+    QList<QStringList> linesUtf8 = parseByText(textUtf8);
+    QList<QStringList> linesLocal = parseByText(textLocal);
+    QList<QStringList> lines = linesUtf8;
+
+    auto findHeaderRow = [](const QList<QStringList> &rows) {
+        for (int r = 0; r < rows.size(); ++r) {
+            const QStringList row = rows[r];
+            const bool hasData = std::any_of(row.begin(), row.end(), [](const QString &cell) {
+                return !cell.trimmed().isEmpty();
+            });
+            if (hasData) {
+                return r;
+            }
+        }
+        return -1;
+    };
+
+    int headerRow = findHeaderRow(lines);
+    if (headerRow < 0 && !linesLocal.isEmpty()) {
+        lines = linesLocal;
+        headerRow = findHeaderRow(lines);
+    }
+
+    if (headerRow < 0) {
+        result.error = QStringLiteral("Cannot detect header row in CSV file.");
+        return result;
+    }
+
+    auto normalize = [](const QString &text) {
+        return QString(text).remove(' ').remove('\t').remove('\r').remove('\n').trimmed().toLower();
+    };
+
+    const QStringList projectKeys = {QStringLiteral("项目"), QStringLiteral("project")};
+    auto detectProjectIndex = [&](const QStringList &headers) {
+        for (int i = 0; i < headers.size(); ++i) {
+            const QString cell = normalize(headers[i]);
+            for (const QString &key : projectKeys) {
+                if (cell.contains(key)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    };
+
+    QStringList headers = lines.value(headerRow);
+    int projectIndex = detectProjectIndex(headers);
+
+    if (projectIndex < 0 && !linesLocal.isEmpty()) {
+        const int localHeaderRow = findHeaderRow(linesLocal);
+        if (localHeaderRow >= 0) {
+            const int localProjectIndex = detectProjectIndex(linesLocal.value(localHeaderRow));
+            if (localProjectIndex >= 0) {
+                lines = linesLocal;
+                headerRow = localHeaderRow;
+                headers = lines.value(headerRow);
+                projectIndex = localProjectIndex;
+            }
+        }
+    }
+
+    int maxCols = headers.size();
+    for (int r = headerRow + 1; r < lines.size(); ++r) {
+        const QStringList row = lines[r];
+        const bool hasData = std::any_of(row.begin(), row.end(), [](const QString &cell) {
+            return !cell.trimmed().isEmpty();
+        });
+        if (!hasData) {
+            continue;
+        }
+        maxCols = std::max(maxCols, static_cast<int>(row.size()));
+    }
+
+    if (projectIndex < 0) {
+        headers.prepend(QStringLiteral("项目"));
+        projectIndex = 0;
+        maxCols += 1;
+    }
+
+    if (headers.size() < maxCols) {
+        for (int i = headers.size(); i < maxCols; ++i) {
+            headers.append(QStringLiteral("列%1").arg(i + 1));
+        }
+    }
+
+    for (int i = 0; i < headers.size(); ++i) {
+        if (headers[i].trimmed().isEmpty()) {
+            headers[i] = QStringLiteral("列%1").arg(i + 1);
+        }
+    }
+
+    QList<QStringList> rows;
+    for (int r = headerRow + 1; r < lines.size(); ++r) {
+        QStringList row = lines[r];
+        const bool hasData = std::any_of(row.begin(), row.end(), [](const QString &cell) {
+            return !cell.trimmed().isEmpty();
+        });
+        if (!hasData) {
+            continue;
+        }
+
+        if (projectIndex == 0 && row.size() < headers.size()) {
+            row.prepend(projectName);
+        }
+
+        if (projectIndex >= 0 && projectIndex < row.size() && row[projectIndex].trimmed().isEmpty()) {
+            row[projectIndex] = projectName;
+        }
+
+        if (row.size() < headers.size()) {
+            row.reserve(headers.size());
+            while (row.size() < headers.size()) {
+                row.append(QString());
+            }
+        } else if (row.size() > headers.size()) {
+            while (headers.size() < row.size()) {
+                headers.append(QStringLiteral("列%1").arg(headers.size() + 1));
+            }
+        }
+
+        rows.append(row);
+    }
+
+    if (rows.isEmpty()) {
+        result.error = QStringLiteral("No valid rows found after the header.");
+        return result;
+    }
+
+    result.ok = true;
+    result.headers = headers;
     result.rows = rows;
     return result;
 }
@@ -538,3 +734,5 @@ with open(out_path, 'w', encoding='utf-8', newline='') as fp:
     }
     return ok;
 }
+
+

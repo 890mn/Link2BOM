@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include <QAbstractTableModel>
 #include <QVariantList>
+#include <QVariantMap>
 
 class BomTableModel : public QAbstractTableModel
 {
@@ -37,6 +38,8 @@ public:
     Q_INVOKABLE void removeRowsByProject(const QString &projectName);
     Q_INVOKABLE QVariantList analyzeDifferences(const QString &keyword, const QString &groupMode) const;
     Q_INVOKABLE QVariantMap buildAnalytics(const QString &groupMode) const;
+    Q_INVOKABLE QVariantMap exportSnapshot() const;
+    Q_INVOKABLE bool importSnapshot(const QVariantMap &snapshot);
 
     void setSourceData(const QStringList &headers, const QList<QStringList> &rows);
     Q_INVOKABLE bool appendRows(const QStringList &headers, const QList<QStringList> &rows);
@@ -57,3 +60,4 @@ private:
     QString m_projectFilter;
     QString m_typeFilter;
 };
+

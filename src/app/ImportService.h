@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QList>
 #include <QObject>
@@ -18,6 +18,7 @@ public:
     explicit ImportService(QObject *parent = nullptr);
 
     ImportResult importLichuangSpreadsheet(const QString &filePath, const QString &projectName) const;
+    ImportResult importGenericSpreadsheet(const QString &filePath, const QString &projectName) const;
 
 private:
     QStringList parseCsvLine(const QString &line) const;
@@ -25,4 +26,6 @@ private:
     bool convertXlsxToCsvWithPython(const QString &inputPath, const QString &outputPath, QString *error) const;
     bool convertExcelToCsvWithPython(const QString &inputPath, const QString &outputPath, QString *error) const;
     ImportResult parseLichuangCsv(const QString &csvPath, const QString &projectName) const;
+    ImportResult parseGenericCsv(const QString &csvPath, const QString &projectName) const;
 };
+

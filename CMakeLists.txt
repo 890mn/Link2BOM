@@ -22,7 +22,7 @@ if (TARGET spdlog)
     set_target_properties(spdlog PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 endif()
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Quick QuickControls2)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Quick QuickControls2 Charts Widgets)
 qt_standard_project_setup(REQUIRES 6.5)
 qt_policy(SET QTP0004 NEW)
 
@@ -36,6 +36,7 @@ set(APP_CPP_SOURCES
     src/app/CategoryController.cpp
     src/app/BomTableModel.cpp
     src/app/ImportService.cpp
+    src/app/ArchiveController.cpp
 )
 
 set(APP_HEADERS
@@ -47,6 +48,7 @@ set(APP_HEADERS
     src/app/CategoryController.h
     src/app/BomTableModel.h
     src/app/ImportService.h
+    src/app/ArchiveController.h
 )
 
 set(APP_PLATFORM_RESOURCES
@@ -93,7 +95,7 @@ qt_add_qml_module(${APP_NAME}
     RESOURCES src/qml/components/qmldir
 )
 
-target_link_libraries(${APP_NAME} PRIVATE Qt6::Quick Qt6::QuickControls2 spdlog::spdlog)
+target_link_libraries(${APP_NAME} PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Charts Qt6::Widgets spdlog::spdlog)
 
 if (WIN32)
     target_link_libraries(${APP_NAME} PRIVATE dwmapi)
@@ -110,4 +112,7 @@ install(TARGETS ${APP_NAME}
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
 )
+
+
+
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QObject>
 #include <QStringListModel>
@@ -15,7 +15,10 @@ public:
     Q_INVOKABLE bool addCategory(const QString &name);
     Q_INVOKABLE bool renameCategory(int index, const QString &name);
     Q_INVOKABLE bool removeCategory(int index);
+    QStringList categoryNames() const;
+    void setCategoryNames(const QStringList &names);
 
 private:
     QStringListModel m_model;
 };
+

@@ -1,4 +1,4 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
@@ -26,7 +26,8 @@ Item {
         return fallback
     }
 
-    function openProjectImportDialog() {
+    function openProjectImportDialog(mode) {
+        importMode = mode === undefined ? "lcsc" : mode
         projectForImportDialog.open()
     }
 
@@ -41,7 +42,50 @@ Item {
         settingsDialog.open()
     }
 
+    function openArchiveDialog() {
+        refreshArchiveSlots()
+        archiveDialog.open()
+    }
+
+    function refreshArchiveSlots() {
+        archiveSlots = root.app.archive.listSlots()
+        if (activeArchiveIndex < 0 || activeArchiveIndex >= archiveSlots.length) {
+            activeArchiveIndex = 0
+        }
+    }
+
+    function defaultArchiveName(index) {
+        if (index <= 0) {
+            return ""
+        }
+        return root.uiLanguage === "en-US"
+            ? "Save" + index
+            : "存档" + index
+    }
+
+    function archiveTitle(slotData) {
+        if (!slotData) {
+            return ""
+        }
+        if (slotData.hasData || slotData.index === 0) {
+            return slotData.title
+        }
+        return defaultArchiveName(slotData.index)
+    }
+
+    function defaultArchiveDir() {
+        if (!archiveSlots || archiveSlots.length === 0) {
+            return ""
+        }
+        const path = String(archiveSlots[0].path || "")
+        const slash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"))
+        return slash > 0 ? path.slice(0, slash) : path
+    }
+
     property string activeProjectForImport: ""
+    property string importMode: "lcsc"
+    property var archiveSlots: []
+    property int activeArchiveIndex: 0
 
     Popup {
         id: projectForImportDialog
@@ -75,7 +119,8 @@ Item {
             ComboBox {
                 id: projectCombo
                 Layout.fillWidth: true
-                model: root.app.projects.projectNames(false)
+                model: root.app.projects.model
+                textRole: "display"
                 implicitHeight: 36
                 font.pixelSize: 13
                 contentItem: Text {
@@ -125,12 +170,15 @@ Item {
                     accent: true
                     onClicked: {
                         const created = newProjectField.text.trim()
+                        const target = created.length > 0 ? created : projectCombo.currentText
+                        if (!target || target === "All Projects") {
+                            root.app.notify(root.txSafe("warn.selectProject", "Please select a project"))
+                            return
+                        }
                         if (created.length > 0) {
                             root.app.projects.addProject(created)
-                            root.activeProjectForImport = created
-                        } else {
-                            root.activeProjectForImport = projectCombo.currentText
                         }
+                        root.activeProjectForImport = target
                         fileDialog.open()
                         newProjectField.clear()
                         projectForImportDialog.close()
@@ -142,9 +190,17 @@ Item {
 
     FileDialog {
         id: fileDialog
-        title: root.txSafe("dialog.selectLichuangFile", "Select LCSC export file")
+        title: importMode === "lcsc"
+            ? root.txSafe("dialog.selectLichuangFile", "Select LCSC export file")
+            : root.txSafe("dialog.selectGenericFile", "Select spreadsheet file")
         nameFilters: ["Spreadsheet Files (*.xlsx *.xls *.csv)", "All Files (*.*)"]
-        onAccepted: root.app.io.importLichuang(selectedFile, root.activeProjectForImport)
+        onAccepted: {
+            if (importMode === "lcsc") {
+                root.app.io.importLichuang(selectedFile, root.activeProjectForImport)
+            } else {
+                root.app.io.importGeneric(selectedFile, root.activeProjectForImport)
+            }
+        }
     }
 
     FileDialog {
@@ -158,6 +214,231 @@ Item {
 
     function openExportDialog() {
         exportFileDialog.open()
+    }
+
+    Popup {
+        id: archiveDialog
+        modal: true
+        focus: true
+        width: 520
+        implicitHeight: archiveContent.implicitHeight + 20
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2)
+        parent: Overlay.overlay
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        padding: 10
+
+        background: Rectangle {
+            radius: 12
+            color: root.subtleColor
+            border.color: root.borderColor
+        }
+
+        ColumnLayout {
+            id: archiveContent
+            anchors.fill: parent
+            spacing: 10
+
+            Label {
+                text: root.txSafe("archive.title", "Local Archives")
+                color: root.textColor
+                font.bold: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                AppButton {
+                    themeColors: root.themeColors
+                    text: root.txSafe("archive.load", "Load")
+                    Layout.fillWidth: true
+                    onClicked: {
+                        if (root.app.archive.loadSlot(activeArchiveIndex)) {
+                            refreshArchiveSlots()
+                        }
+                    }
+                }
+
+                AppButton {
+                    themeColors: root.themeColors
+                    text: root.txSafe("archive.save", "Save")
+                    accent: true
+                    Layout.fillWidth: true
+                    onClicked: {
+                        const defaultName = defaultArchiveName(activeArchiveIndex)
+                        const label = archiveNameField.text.trim() || defaultName
+                        const path = archivePathField.text.trim()
+                        root.app.archive.saveSlot(activeArchiveIndex, label, path)
+                        refreshArchiveSlots()
+                        archiveNameField.clear()
+                        archivePathField.clear()
+                    }
+                }
+            }
+
+            Label {
+                text: root.txSafe("archive.name", "Save name")
+                color: root.textColor
+            }
+
+            TextField {
+                id: archiveNameField
+                Layout.fillWidth: true
+                placeholderText: defaultArchiveName(activeArchiveIndex)
+                implicitHeight: 36
+                color: root.textColor
+                placeholderTextColor: root.mutedTextColor
+                selectionColor: root.primaryColor
+                selectedTextColor: "#FFFFFF"
+                background: Rectangle {
+                    radius: 10
+                    color: root.cardColor
+                    border.color: root.borderColor
+                }
+            }
+
+            Label {
+                text: root.txSafe("archive.path", "Save path")
+                color: root.textColor
+            }
+
+            TextField {
+                id: archivePathField
+                Layout.fillWidth: true
+                placeholderText: defaultArchiveDir()
+                implicitHeight: 36
+                color: root.textColor
+                placeholderTextColor: root.mutedTextColor
+                selectionColor: root.primaryColor
+                selectedTextColor: "#FFFFFF"
+                background: Rectangle {
+                    radius: 10
+                    color: root.cardColor
+                    border.color: root.borderColor
+                }
+            }
+
+            Repeater {
+                model: archiveSlots
+                delegate: Item {
+                    id: slotRow
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: 56
+
+                    RowLayout {
+                        anchors.fill: parent
+                        spacing: 8
+
+                        Rectangle {
+                            id: slotCard
+                            Layout.fillWidth: true
+                            implicitHeight: 56
+                            radius: 10
+                            color: root.cardColor
+                            border.color: activeArchiveIndex === slotRow.modelData.index ? root.primaryColor : root.borderColor
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 8
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    Label { text: archiveTitle(slotRow.modelData); color: root.textColor; font.bold: true; elide: Text.ElideRight }
+                                    Item {
+                                        id: subtitleClip
+                                        Layout.fillWidth: true
+                                        height: 16
+                                        clip: true
+                                        property bool hovered: subtitleHover.hovered
+                                        property real overflow: Math.max(0, subtitleText.implicitWidth - width)
+
+                                        Text {
+                                            id: subtitleText
+                                            text: slotRow.modelData.subtitle
+                                            color: root.mutedTextColor
+                                            font.pixelSize: 12
+                                            elide: Text.ElideRight
+                                            x: 0
+                                            y: 0
+                                        }
+
+                                        SequentialAnimation {
+                                            id: subtitleMarquee
+                                            running: subtitleClip.hovered && subtitleClip.overflow > 0
+                                            loops: Animation.Infinite
+                                            NumberAnimation {
+                                                target: subtitleText
+                                                property: "x"
+                                                from: 0
+                                                to: -(subtitleClip.overflow + 12)
+                                                duration: Math.max(1200, subtitleClip.overflow * 16)
+                                                easing.type: Easing.InOutSine
+                                            }
+                                            PauseAnimation { duration: 700 }
+                                            NumberAnimation {
+                                                target: subtitleText
+                                                property: "x"
+                                                to: 0
+                                                duration: 600
+                                                easing.type: Easing.InOutQuad
+                                            }
+                                            PauseAnimation { duration: 500 }
+                                        }
+
+                                        HoverHandler {
+                                            id: subtitleHover
+                                            onHoveredChanged: {
+                                                if (!hovered) {
+                                                    subtitleText.x = 0
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: activeArchiveIndex = slotRow.modelData.index
+                            }
+                        }
+
+                        Rectangle {
+                            id: deleteCard
+                            visible: slotRow.modelData.canDelete
+                            Layout.preferredWidth: slotRow.modelData.canDelete ? 92 : 0
+                            implicitHeight: 56
+                            radius: 10
+                            color: root.cardColor
+                            border.color: root.borderColor
+
+                            Label {
+                                anchors.centerIn: parent
+                                text: root.txSafe("common.delete", "Delete")
+                                color: root.textColor
+                                font.bold: true
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (root.app.archive.deleteSlot(slotRow.modelData.index)) {
+                                        refreshArchiveSlots()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        onOpened: refreshArchiveSlots()
     }
 
     Popup {

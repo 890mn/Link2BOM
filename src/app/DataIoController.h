@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QObject>
 #include <QUrl>
@@ -15,6 +15,7 @@ public:
     explicit DataIoController(ProjectController *projects, BomTableModel *bomModel, QObject *parent = nullptr);
 
     Q_INVOKABLE void importLichuang(const QUrl &fileUrl, const QString &projectName);
+    Q_INVOKABLE void importGeneric(const QUrl &fileUrl, const QString &projectName);
     Q_INVOKABLE bool exportCsv(const QUrl &fileUrl);
 
 signals:
@@ -25,3 +26,4 @@ private:
     BomTableModel *m_bomModel = nullptr;
     ImportService m_importService;
 };
+

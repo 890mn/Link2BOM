@@ -1,12 +1,14 @@
-#include "AppController.h"
+﻿#include "AppController.h"
 #include "AppLogger.h"
 
 #include <QSettings>
+#include <QCoreApplication>
 #include <cmath>
 
 AppController::AppController(QObject *parent)
     : QObject(parent)
     , m_io(&m_projects, &m_bomModel, this)
+    , m_archive(&m_projects, &m_categories, &m_bomModel, this)
 {
     AppLogger::attachRelay(&m_logRelay);
     loadUiSettings();
@@ -19,7 +21,9 @@ AppController::AppController(QObject *parent)
     });
     connect(&m_io, &DataIoController::statusMessage, this, &AppController::setStatus);
 
-    m_bomModel.setSourceData({QStringLiteral("\u9879\u76ee"),
+    const bool loaded = m_archive.loadSlot(0);
+    if (!loaded) {
+        m_bomModel.setSourceData({QStringLiteral("\u9879\u76ee"),
                               QStringLiteral("\u5546\u54c1\u7f16\u53f7"),
                               QStringLiteral("\u54c1\u724c"),
                               QStringLiteral("\u5382\u5bb6\u578b\u53f7"),
@@ -36,9 +40,11 @@ AppController::AppController(QObject *parent)
                               {QStringLiteral("Default Project"), QStringLiteral("C29294"), QStringLiteral("TI"), QStringLiteral("TPS54331DR"), QStringLiteral("SOIC8"), QStringLiteral("DC-DC"), QStringLiteral("1"), QStringLiteral("0.7800"), QStringLiteral("0.7800")},
                               {QStringLiteral("Default Project"), QStringLiteral("C5446"), QStringLiteral("Omron"), QStringLiteral("B3F-1000"), QStringLiteral("THT"), QStringLiteral("Tact Switch"), QStringLiteral("2"), QStringLiteral("0.0900"), QStringLiteral("0.1800")},
                               {QStringLiteral("Default Project"), QStringLiteral("C7213"), QStringLiteral("Littelfuse"), QStringLiteral("1206L050"), QStringLiteral("1206"), QStringLiteral("PTC Fuse"), QStringLiteral("1"), QStringLiteral("0.1500"), QStringLiteral("0.1500")}});
+    }
 
     m_bomModel.setProjectFilter(m_projects.selectedProject());
     setStatus(QStringLiteral("Ready"));
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, this, [this] { m_archive.saveSlot(0); });
 }
 
 ThemeController *AppController::theme() { return &m_theme; }
@@ -46,6 +52,7 @@ ProjectController *AppController::projects() { return &m_projects; }
 CategoryController *AppController::categories() { return &m_categories; }
 BomTableModel *AppController::bomModel() { return &m_bomModel; }
 DataIoController *AppController::io() { return &m_io; }
+ArchiveController *AppController::archive() { return &m_archive; }
 LogRelay *AppController::logRelay() { return &m_logRelay; }
 QString AppController::status() const { return m_status; }
 
@@ -177,3 +184,8 @@ void AppController::saveUiSettings() const
     QSettings settings;
     settings.setValue(QStringLiteral("bom/customWidthRatios"), toSave);
 }
+
+
+
+
+

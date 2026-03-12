@@ -1,4 +1,4 @@
-#include "ProjectController.h"
+﻿#include "ProjectController.h"
 
 ProjectController::ProjectController(QObject *parent)
     : QObject(parent)
@@ -33,6 +33,39 @@ QStringList ProjectController::projectNames(bool includeAll) const
         names.removeAll(QStringLiteral("All Projects"));
     }
     return names;
+}
+
+QStringList ProjectController::allProjectNames() const
+{
+    return m_model.stringList();
+}
+
+void ProjectController::setProjectNames(const QStringList &names, const QString &selected)
+{
+    QStringList list;
+    list.append(QStringLiteral("All Projects"));
+    for (const QString &name : names) {
+        const QString trimmed = name.trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        if (!list.contains(trimmed)) {
+            list.append(trimmed);
+        }
+    }
+    if (!list.contains(QStringLiteral("Default Project"))) {
+        list.append(QStringLiteral("Default Project"));
+    }
+    m_model.setStringList(list);
+
+    const QString target = selected.trimmed();
+    if (!target.isEmpty() && list.contains(target)) {
+        setSelectedProject(target);
+    } else if (list.contains(QStringLiteral("Default Project"))) {
+        setSelectedProject(QStringLiteral("Default Project"));
+    } else {
+        setSelectedProject(list.value(0));
+    }
 }
 
 bool ProjectController::addProject(const QString &name)

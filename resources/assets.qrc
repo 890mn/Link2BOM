@@ -13,5 +13,7 @@
         <file alias="assets/down-light.png">../assets/down-light.png</file>
         <file alias="assets/setting-dark.png">../assets/setting-dark.png</file>
         <file alias="assets/setting-light.png">../assets/setting-light.png</file>
+        <file alias="assets/achieve-dark.png">../assets/achieve-dark.png</file>
+        <file alias="assets/achieve-light.png">../assets/achieve-light.png</file>
     </qresource>
 </RCC>

@@ -14,7 +14,7 @@ Item {
 
     signal togglePinned()
     signal openSettings()
-    signal requestImport()
+    signal requestImport(string mode)
     signal requestExport()
     signal requestNewProject()
     signal requestRenameProject(int index, string currentName)
@@ -23,6 +23,7 @@ Item {
     signal requestRenameCategory(int index, string currentName)
     signal requestDeleteCategory(int index, string currentName)
     signal toggleDebugPanel()
+    signal openArchive()
 
     function txSafe(key, fallback) {
         if (root.textMap && root.textMap[key] !== undefined) {
@@ -134,6 +135,26 @@ Item {
                             MouseArea { anchors.fill: parent; onClicked: root.app.theme.currentIndex = themeDot.index }
                         }
                     }
+
+                    Item {
+                        Layout.preferredWidth: 18
+                        Layout.preferredHeight: 18
+
+                        Image {
+                            anchors.fill: parent
+                            fillMode: Image.PreserveAspectFit
+                            source: root.app.theme.currentThemeName === "Dark"
+                                ? "qrc:/assets/achieve-dark.png"
+                                : "qrc:/assets/achieve-light.png"
+                            smooth: true
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.openArchive()
+                        }
+                    }
                 }
             }
         }
@@ -174,9 +195,9 @@ Item {
                     ColumnLayout {
                         anchors.fill: parent
                         spacing: 8
-                        AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.import.lcsc", "LCSC Import (XLS)"); Layout.fillWidth: true; onClicked: root.requestImport() }
-                        AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.import.sheet", "Import XLS/XLSX"); Layout.fillWidth: true; onClicked: root.requestImport() }
-                        AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.import.ocr", "OCR Import (Later)"); Layout.fillWidth: true; onClicked: root.app.notify(root.txSafe("sidebar.import.ocr.todo", "OCR flow is not connected yet.")) }
+                        AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.import.lcsc", "LCSC Import (XLS)"); Layout.fillWidth: true; onClicked: root.requestImport("lcsc") }
+                        AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.import.sheet", "Import XLS/XLSX/CSV"); Layout.fillWidth: true; onClicked: root.requestImport("generic") }
+                        AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.import.ocr", "OCR Import (Later)"); Layout.fillWidth: true; onClicked: root.requestImport("ocr") }
                     }
                 }
 
@@ -237,3 +258,10 @@ Item {
         }
     }
 }
+
+
+
+
+
+
+

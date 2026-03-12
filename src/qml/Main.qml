@@ -292,13 +292,22 @@ ApplicationWindow {
             onToggleDebugPanel: {
                 root.debugPanelVisible = !root.debugPanelVisible
             }
-            onRequestImport: {
-                root.logInfo("Request import dialog")
-                dialogHost.openProjectImportDialog()
+            onRequestImport: function(mode) {
+                if (mode === "ocr") {
+                    root.logWarning("OCR import is not ready")
+                    root.appCtx.notify(root.tx("sidebar.import.ocr.todo"))
+                    return
+                }
+                root.logInfo("Request import dialog: " + mode)
+                dialogHost.openProjectImportDialog(mode)
             }
             onRequestExport: {
                 root.logInfo("Request CSV export dialog")
                 dialogHost.openExportDialog()
+            }
+            onOpenArchive: {
+                root.logInfo("Open archive dialog")
+                dialogHost.openArchiveDialog()
             }
             onRequestNewProject: {
                 root.logInfo("Request new project dialog")
@@ -454,3 +463,4 @@ ApplicationWindow {
         }
     }
 }
+

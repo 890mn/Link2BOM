@@ -1,7 +1,8 @@
-pragma ComponentBehavior: Bound
+﻿pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtCharts
 
 Item {
     id: root
@@ -24,6 +25,17 @@ Item {
             return root.textMap[key]
         }
         return fallback
+    }
+
+    function buildBarData() {
+        const items = (root.diffStats && root.diffStats.groupItems) ? root.diffStats.groupItems : []
+        const labels = []
+        const values = []
+        for (let i = 0; i < items.length; ++i) {
+            labels.push(String(items[i].name))
+            values.push(Number(items[i].count))
+        }
+        return { labels: labels, values: values }
     }
 
     ColumnLayout {
@@ -252,39 +264,47 @@ Item {
                         color: root.themeColors.card
                         border.color: root.themeColors.border
 
-                        Canvas {
-                            id: barCanvas
+                        ChartView {
+                            id: barChart
                             anchors.fill: parent
                             anchors.margins: 12
-                            onPaint: {
-                                const ctx = getContext("2d")
-                                ctx.reset()
-                                const items = (root.diffStats && root.diffStats.groupItems) ? root.diffStats.groupItems : []
-                                if (!items.length) {
-                                    return
-                                }
-                                const maxVal = Math.max(1, ...items.map(function(it) { return it.count }))
-                                const barGap = 10
-                                const barHeight = Math.max(18, Math.floor((height - (items.length + 1) * barGap) / items.length))
-                                for (let i = 0; i < items.length; ++i) {
-                                    const y = barGap + i * (barHeight + barGap)
-                                    const name = String(items[i].name)
-                                    const count = Number(items[i].count)
-                                    const barW = Math.max(2, Math.floor((width - 220) * count / maxVal))
-                                    ctx.fillStyle = "rgba(201,119,143,0.85)"
-                                    ctx.fillRect(180, y, barW, barHeight)
-                                    ctx.fillStyle = root.darkTheme ? "#E6E1E8" : "#0F172A"
-                                    ctx.font = "12px sans-serif"
-                                    ctx.fillText(name, 6, y + barHeight - 4)
-                                    ctx.fillText(String(count), 188 + barW, y + barHeight - 4)
+                            antialiasing: true
+                            legend.visible: false
+                            backgroundColor: "transparent"
+
+                            BarSeries {
+                                id: barSeries
+                                axisX: barAxis
+                                axisY: valueAxis
+                                BarSet {
+                                    id: barSet
+                                    label: root.txSafe("diff.result.count", "Diff Items")
+                                    color: root.primaryColor
+                                    values: buildBarData().values
                                 }
                             }
-                            Connections {
-                                target: root
-                                function onDiffStatsChanged() { barCanvas.requestPaint() }
+
+                            BarCategoryAxis {
+                                id: barAxis
+                                categories: buildBarData().labels
+                                labelsAngle: -30
+                                labelsColor: root.textColor                            }
+
+                            ValueAxis {
+                                id: valueAxis
+                                min: 0
+                                max: {
+                                    const values = buildBarData().values
+                                    let maxValue = 1
+                                    for (let i = 0; i < values.length; ++i) {
+                                        if (values[i] > maxValue) maxValue = values[i]
+                                    }
+                                    return Math.ceil(maxValue * 1.15)
+                                }
+                                labelFormat: "%d"
+                                labelsColor: root.textColor
+                                gridLineColor: root.themeColors.border
                             }
-                            onWidthChanged: requestPaint()
-                            onHeightChanged: requestPaint()
                         }
                     }
 
@@ -310,3 +330,4 @@ Item {
         }
     }
 }
+

@@ -1,4 +1,4 @@
-#include "BomTableModel.h"
+﻿#include "BomTableModel.h"
 
 #include <QHash>
 #include <QRegularExpression>
@@ -588,6 +588,37 @@ QVariantMap BomTableModel::buildAnalytics(const QString &groupMode) const
     return out;
 }
 
+QVariantMap BomTableModel::exportSnapshot() const
+{
+    QVariantMap snapshot;
+    snapshot.insert(QStringLiteral("headers"), m_sourceHeaders);
+    QVariantList rows;
+    rows.reserve(m_sourceRows.size());
+    for (const QStringList &row : m_sourceRows) {
+        rows.append(row);
+    }
+    snapshot.insert(QStringLiteral("rows"), rows);
+    return snapshot;
+}
+
+bool BomTableModel::importSnapshot(const QVariantMap &snapshot)
+{
+    const QStringList headers = snapshot.value(QStringLiteral("headers")).toStringList();
+    const QVariantList rowsVar = snapshot.value(QStringLiteral("rows")).toList();
+    QList<QStringList> rows;
+    rows.reserve(rowsVar.size());
+    for (const QVariant &rowVar : rowsVar) {
+        rows.append(rowVar.toStringList());
+    }
+
+    if (headers.isEmpty()) {
+        return false;
+    }
+
+    setSourceData(headers, rows);
+    return true;
+}
+
 void BomTableModel::setSourceData(const QStringList &headers, const QList<QStringList> &rows)
 {
     beginResetModel();
@@ -680,3 +711,5 @@ void BomTableModel::rebuildFilteredRows()
     }
     endResetModel();
 }
+
+

@@ -1,5 +1,5 @@
 ﻿#include <QCoreApplication>
-#include <QGuiApplication>
+#include <QApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -51,7 +51,7 @@ static void applyWindowsTitleBarTheme(QWindow *window, bool dark)
 int main(int argc, char *argv[])
 {
     QQuickStyle::setStyle(QStringLiteral("Fusion"));
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     app.setWindowIcon(QIcon(QStringLiteral(":/assets/icon_100.png")));
     QCoreApplication::setOrganizationName(QStringLiteral("Link2BOM"));
     QCoreApplication::setApplicationName(QStringLiteral("Link2BOM"));
@@ -82,6 +82,8 @@ int main(int argc, char *argv[])
 
     return app.exec();
 }
+
+
 
 
 
