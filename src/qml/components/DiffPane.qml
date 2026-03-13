@@ -13,6 +13,7 @@ Item {
     required property color subtleColor
     required property bool darkTheme
     required property var textMap
+    required property string uiLanguage
     required property string groupMode
     required property string viewMode
     required property var diffItems
@@ -36,6 +37,29 @@ Item {
             values.push(Number(items[i].count))
         }
         return { labels: labels, values: values }
+    }
+
+    function fieldDisplayName(name) {
+        const raw = String(name || "").trim()
+        if (root.uiLanguage !== "en-US" || raw.length === 0) {
+            return raw
+        }
+        const map = {
+            "项目": "Project",
+            "商品编号": "Item Code",
+            "品牌": "Brand",
+            "厂家型号": "MPN",
+            "封装": "Package",
+            "商品名称": "Name",
+            "订购数量（修改后）": "Qty",
+            "订购数量(修改后)": "Qty",
+            "数量": "Qty",
+            "商品单价": "Unit Price",
+            "单价": "Unit Price",
+            "商品金额": "Amount",
+            "金额": "Amount"
+        }
+        return map[raw] || raw
     }
 
     ColumnLayout {
@@ -194,7 +218,7 @@ Item {
                                         Label {
                                             Layout.preferredWidth: 160
                                             Layout.maximumWidth: 160
-                                            text: fieldRow.modelData.field
+                                            text: root.fieldDisplayName(fieldRow.modelData.field)
                                             color: root.primaryColor
                                             font.bold: true
                                             elide: Text.ElideRight

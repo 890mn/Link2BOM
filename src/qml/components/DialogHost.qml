@@ -28,6 +28,10 @@ Item {
 
     function openProjectImportDialog(mode) {
         importMode = mode === undefined ? "lcsc" : mode
+        refreshProjectOptions()
+        const selected = root.app.projects.selectedProject
+        const idx = projectOptions.indexOf(selected)
+        projectCombo.currentIndex = idx >= 0 ? idx : 0
         projectForImportDialog.open()
     }
 
@@ -52,6 +56,19 @@ Item {
         if (activeArchiveIndex < 0 || activeArchiveIndex >= archiveSlots.length) {
             activeArchiveIndex = 0
         }
+    }
+
+    function archiveSlotByIndex(index) {
+        for (let i = 0; i < archiveSlots.length; ++i) {
+            if (archiveSlots[i].index === index) {
+                return archiveSlots[i]
+            }
+        }
+        return null
+    }
+
+    function refreshProjectOptions() {
+        projectOptions = root.app.projects.projectNames(false)
     }
 
     function defaultArchiveName(index) {
@@ -86,6 +103,10 @@ Item {
     property string importMode: "lcsc"
     property var archiveSlots: []
     property int activeArchiveIndex: 0
+    property var projectOptions: []
+    property int pendingArchiveIndex: -1
+    property string pendingArchiveLabel: ""
+    property string pendingArchivePath: ""
 
     Popup {
         id: projectForImportDialog
@@ -119,8 +140,7 @@ Item {
             ComboBox {
                 id: projectCombo
                 Layout.fillWidth: true
-                model: root.app.projects.model
-                textRole: "display"
+                model: projectOptions
                 implicitHeight: 36
                 font.pixelSize: 13
                 contentItem: Text {
@@ -256,6 +276,9 @@ Item {
                     onClicked: {
                         if (root.app.archive.loadSlot(activeArchiveIndex)) {
                             refreshArchiveSlots()
+                            root.app.notify(root.txSafe("archive.load.ok", "Archive loaded"))
+                        } else {
+                            root.app.notify(root.txSafe("archive.load.fail", "Load failed"))
                         }
                     }
                 }
@@ -269,8 +292,20 @@ Item {
                         const defaultName = defaultArchiveName(activeArchiveIndex)
                         const label = archiveNameField.text.trim() || defaultName
                         const path = archivePathField.text.trim()
-                        root.app.archive.saveSlot(activeArchiveIndex, label, path)
-                        refreshArchiveSlots()
+                        const slot = archiveSlotByIndex(activeArchiveIndex)
+                        if (slot && slot.hasData) {
+                            pendingArchiveIndex = activeArchiveIndex
+                            pendingArchiveLabel = label
+                            pendingArchivePath = path
+                            overwriteDialog.open()
+                            return
+                        }
+                        if (root.app.archive.saveSlot(activeArchiveIndex, label, path)) {
+                            refreshArchiveSlots()
+                            root.app.notify(root.txSafe("archive.save.ok", "Archive saved"))
+                        } else {
+                            root.app.notify(root.txSafe("archive.save.fail", "Save failed"))
+                        }
                         archiveNameField.clear()
                         archivePathField.clear()
                     }
@@ -439,6 +474,43 @@ Item {
         }
 
         onOpened: refreshArchiveSlots()
+    }
+
+    Dialog {
+        id: overwriteDialog
+        modal: true
+        focus: true
+        title: root.txSafe("archive.overwrite.title", "Overwrite Archive")
+        width: 360
+        implicitWidth: 360
+        standardButtons: Dialog.Yes | Dialog.No
+        onAccepted: {
+            if (pendingArchiveIndex >= 0) {
+                if (root.app.archive.saveSlot(pendingArchiveIndex, pendingArchiveLabel, pendingArchivePath)) {
+                    refreshArchiveSlots()
+                    root.app.notify(root.txSafe("archive.save.ok", "Archive saved"))
+                } else {
+                    root.app.notify(root.txSafe("archive.save.fail", "Save failed"))
+                }
+            }
+            pendingArchiveIndex = -1
+            pendingArchiveLabel = ""
+            pendingArchivePath = ""
+            archiveNameField.clear()
+            archivePathField.clear()
+        }
+        onRejected: {
+            pendingArchiveIndex = -1
+            pendingArchiveLabel = ""
+            pendingArchivePath = ""
+        }
+
+        contentItem: Label {
+            width: overwriteDialog.width - 40
+            text: root.txSafe("archive.overwrite.body", "This slot already has data. Overwrite it?")
+            color: root.textColor
+            wrapMode: Text.WordWrap
+        }
     }
 
     Popup {

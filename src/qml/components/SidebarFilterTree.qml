@@ -203,36 +203,22 @@ Item {
         themeColors: root.themeColors
         darkTheme: root.app.theme.currentThemeName === "Dark"
         collapsed: root.collapsed
-        normalHeight: root.autoHeight ? Math.max(360, filtersContent.implicitHeight + 86) : root.customHeight
+        normalHeight: {
+            const contentHeight = Math.max(420, filtersContent.implicitHeight + 46)
+            const available = (parent && parent.height > 0) ? (parent.height - 18) : contentHeight
+            return Math.max(minModuleHeight, Math.min(available, contentHeight))
+        }
         onCollapsedChanged: root.collapsed = collapsed
 
         ColumnLayout {
             anchors.fill: parent
             spacing: 8
 
-            RowLayout {
-                Layout.fillWidth: true
-                AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.height.auto", "Auto Height"); Layout.fillWidth: true; accent: root.autoHeight; onClicked: root.autoHeight = true }
-                AppButton { themeColors: root.themeColors; text: root.txSafe("sidebar.height.custom", "Custom Height"); Layout.fillWidth: true; accent: !root.autoHeight; onClicked: root.autoHeight = false }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                visible: !root.autoHeight
-                Label { text: root.txSafe("sidebar.height", "Height") + ": " + root.customHeight; color: root.themeColors.text; font.pixelSize: 12 }
-                Slider {
-                    Layout.fillWidth: true
-                    from: 320; to: 860; stepSize: 10
-                    value: root.customHeight
-                    onMoved: root.customHeight = Math.round(value)
-                    onValueChanged: if (pressed) root.customHeight = Math.round(value)
-                }
-            }
-
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
+                padding: 0
                 Column {
                     id: filtersContent
                     width: parent.width

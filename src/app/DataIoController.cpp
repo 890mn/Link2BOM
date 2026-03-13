@@ -82,11 +82,57 @@ void DataIoController::importLichuang(const QUrl &fileUrl, const QString &projec
     }
 
     if (!m_bomModel->appendRows(result.headers, result.rows)) {
-        m_bomModel->setSourceData(result.headers, result.rows);
-        emit statusMessage(QStringLiteral("Imported and replaced BOM headers due to new template."));
-    } else {
-        emit statusMessage(QStringLiteral("Imported %1 -> %2").arg(fileUrl.fileName(), targetProject));
+        const QStringList targetHeaders = m_bomModel->availableHeaders();
+        if (targetHeaders.isEmpty()) {
+            m_bomModel->setSourceData(result.headers, result.rows);
+        } else {
+            auto normalize = [](const QString &text) {
+                return QString(text).remove(' ').remove('\t').remove('\r').remove('\n').trimmed().toLower();
+            };
+            QVector<int> mapping;
+            mapping.reserve(targetHeaders.size());
+            int mappedCount = 0;
+            for (const QString &target : targetHeaders) {
+                const QString targetNorm = normalize(target);
+                int srcIndex = -1;
+                for (int i = 0; i < result.headers.size(); ++i) {
+                    const QString srcNorm = normalize(result.headers[i]);
+                    if (!targetNorm.isEmpty() && (srcNorm == targetNorm || srcNorm.contains(targetNorm) || targetNorm.contains(srcNorm))) {
+                        srcIndex = i;
+                        break;
+                    }
+                }
+                if (srcIndex >= 0) {
+                    mappedCount += 1;
+                }
+                mapping.append(srcIndex);
+            }
+
+            if (mappedCount == 0) {
+                emit statusMessage(QStringLiteral("Import failed: header mismatch with current BOM view. Import aborted to avoid overwriting existing data."));
+                return;
+            }
+
+            QList<QStringList> mappedRows;
+            mappedRows.reserve(result.rows.size());
+            for (const QStringList &row : result.rows) {
+                QStringList out;
+                out.reserve(targetHeaders.size());
+                for (int i = 0; i < targetHeaders.size(); ++i) {
+                    const int srcIndex = mapping[i];
+                    out.append(srcIndex >= 0 && srcIndex < row.size() ? row[srcIndex] : QString());
+                }
+                mappedRows.append(out);
+            }
+
+            if (!m_bomModel->appendRows(targetHeaders, mappedRows)) {
+                emit statusMessage(QStringLiteral("Import failed: header mismatch with current BOM view. Import aborted to avoid overwriting existing data."));
+                return;
+            }
+        }
     }
+
+    emit statusMessage(QStringLiteral("Imported %1 -> %2").arg(fileUrl.fileName(), targetProject));
 
     if (!targetProject.isEmpty()) {
         m_projects->setSelectedProject(targetProject);

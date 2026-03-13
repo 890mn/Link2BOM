@@ -23,6 +23,11 @@ public:
     Q_INVOKABLE bool saveSlot(int index, const QString &label = QString(), const QString &customPath = QString());
     Q_INVOKABLE bool loadSlot(int index);
     Q_INVOKABLE bool deleteSlot(int index);
+    void ensureDefaultSlots(const QStringList &headers,
+                            const QList<QStringList> &rows,
+                            const QStringList &projects,
+                            const QStringList &categories,
+                            const QString &selectedProject);
 
 private:
     QString baseDir() const;

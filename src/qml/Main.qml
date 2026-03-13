@@ -447,6 +447,7 @@ ApplicationWindow {
                     subtleColor: root.subtleColor
                     darkTheme: root.darkTheme
                     textMap: root.textMap
+                    uiLanguage: root.uiLanguage
                     groupMode: root.diffGroupMode
                     viewMode: root.diffViewMode
                     diffItems: root.diffItems

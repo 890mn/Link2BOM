@@ -28,6 +28,29 @@ Item {
         return fallback
     }
 
+    function headerDisplayName(header) {
+        const raw = String(header || "").trim()
+        if (root.uiLanguage !== "en-US" || raw.length === 0) {
+            return raw
+        }
+        const map = {
+            "项目": "Project",
+            "商品编号": "Item Code",
+            "品牌": "Brand",
+            "厂家型号": "MPN",
+            "封装": "Package",
+            "商品名称": "Name",
+            "订购数量（修改后）": "Qty",
+            "订购数量(修改后)": "Qty",
+            "数量": "Qty",
+            "商品单价": "Unit Price",
+            "单价": "Unit Price",
+            "商品金额": "Amount",
+            "金额": "Amount"
+        }
+        return map[raw] || raw
+    }
+
     function openColumnConfig(slot, anchorItem) {
         if (slot < 0 || slot >= root.app.bomModel.visibleSlotCount()) {
             root.debugLog("WARNING", "Open column config rejected: invalid slot " + slot)
@@ -90,7 +113,7 @@ Item {
         const next = customRatios.slice(0, count)
         for (let index = 0; index < count; ++index) {
             const value = Number(next[index])
-            if (!(value > 0.01)) {
+            if (!Number.isFinite(value) || Math.abs(value) < 0.01) {
                 next[index] = slotWeight(index)
                 changed = true
             }
@@ -128,7 +151,7 @@ Item {
         }
         ensureCustomRatios()
         const next = customRatios.slice()
-        next[slot] = Math.max(0.2, Math.min(6.0, ratio))
+        next[slot] = Math.max(-2.0, Math.min(6.0, ratio))
         customRatios = next
         root.debugLog("INFO", "Set ratio for slot " + slot + " to " + next[slot].toFixed(2))
         persistCustomRatios()
@@ -136,9 +159,23 @@ Item {
         header.forceLayout()
     }
 
+    function slotMinWidth(slot) {
+        const raw = Number(customRatios[slot])
+        if (Number.isFinite(raw) && raw < 0) {
+            return 40
+        }
+        return root.minColumnWidth
+    }
+
     function slotRatio(slot) {
         const value = Number(customRatios[slot])
-        return value > 0.01 ? value : slotWeight(slot)
+        if (!Number.isFinite(value) || Math.abs(value) < 0.01) {
+            return slotWeight(slot)
+        }
+        if (value < 0) {
+            return Math.max(0.05, 0.2 / (1 + Math.abs(value)))
+        }
+        return value
     }
 
     function slotWidth(slot) {
@@ -148,8 +185,10 @@ Item {
         const available = Math.max(0, total - spacingTotal)
 
         let ratioSum = 0.0
+        let minSum = 0.0
         for (let index = 0; index < count; ++index) {
             ratioSum += root.slotRatio(index)
+            minSum += root.slotMinWidth(index)
         }
         if (ratioSum <= 0.0001) {
             const base = Math.floor(available / count)
@@ -162,23 +201,25 @@ Item {
         let used = 0
         if (slot === count - 1) {
             for (let i = 0; i < count - 1; ++i) {
-                if (available <= count * root.minColumnWidth) {
+                const minWidth = root.slotMinWidth(i)
+                if (available <= minSum) {
                     used += Math.max(40, Math.floor(available * (root.slotRatio(i) / ratioSum)))
                 } else {
-                    const extra = available - count * root.minColumnWidth
-                    const weighted = root.minColumnWidth + extra * (root.slotRatio(i) / ratioSum)
+                    const extra = available - minSum
+                    const weighted = minWidth + extra * (root.slotRatio(i) / ratioSum)
                     used += Math.floor(weighted)
                 }
             }
-            return Math.max(root.minColumnWidth, available - used)
+            return Math.max(root.slotMinWidth(slot), available - used)
         }
 
-        if (available <= count * root.minColumnWidth) {
+        if (available <= minSum) {
             return Math.max(40, Math.floor(available * (root.slotRatio(slot) / ratioSum)))
         }
 
-        const extra = available - count * root.minColumnWidth
-        const weighted = root.minColumnWidth + extra * (root.slotRatio(slot) / ratioSum)
+        const minWidth = root.slotMinWidth(slot)
+        const extra = available - minSum
+        const weighted = minWidth + extra * (root.slotRatio(slot) / ratioSum)
         return Math.floor(weighted)
     }
 
@@ -207,16 +248,23 @@ Item {
             root.ensureSortState()
             root.restoreCustomRatios()
             root.debugLog("INFO", "BOM model reset")
+            if (columnConfigPopup.visible && columnConfigPopup.slot >= 0) {
+                columnConfigPopup.sliderValue = root.slotRatio(columnConfigPopup.slot)
+            }
         }
         function onHeaderDataChanged() {
             root.restoreCustomRatios()
             root.debugLog("INFO", "BOM header changed")
+            if (columnConfigPopup.visible && columnConfigPopup.slot >= 0) {
+                columnConfigPopup.sliderValue = root.slotRatio(columnConfigPopup.slot)
+            }
         }
     }
 
     Popup {
         id: columnConfigPopup
         property int slot: -1
+        property real sliderValue: 1.0
         width: 300
         height: Math.min(root.popupMaxHeight, contentColumn.implicitHeight + 20)
         modal: false
@@ -321,7 +369,7 @@ Item {
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
                                 ButtonGroup.group: fieldChoiceGroup
-                                text: fieldOption.modelData
+                                text: root.headerDisplayName(fieldOption.modelData)
                                 checked: fieldOption.modelData === root.app.bomModel.visibleHeaderAt(columnConfigPopup.slot)
                                 onClicked: {
                                     const before = root.app.bomModel.visibleHeaderAt(columnConfigPopup.slot)
@@ -343,17 +391,13 @@ Item {
 
             Slider {
                 Layout.fillWidth: true
-                from: 0.2
+                from: -2.0
                 to: 6.0
                 stepSize: 0.1
-                value: root.slotRatio(columnConfigPopup.slot)
+                value: columnConfigPopup.sliderValue
                 palette.accent: root.ratioAccentColor
                 palette.highlight: root.ratioAccentColor
-                onValueChanged: {
-                    if (pressed) {
-                        root.setSlotRatio(columnConfigPopup.slot, value)
-                    }
-                }
+                onMoved: root.setSlotRatio(columnConfigPopup.slot, value)
                 onPressedChanged: {
                     if (!pressed) {
                         root.setSlotRatio(columnConfigPopup.slot, value)
@@ -379,6 +423,13 @@ Item {
                         root.setSlotRatio(columnConfigPopup.slot, root.slotWeight(columnConfigPopup.slot))
                     }
                 }
+            }
+        }
+
+        onOpened: columnConfigPopup.sliderValue = root.slotRatio(columnConfigPopup.slot)
+        onSlotChanged: {
+            if (columnConfigPopup.visible && columnConfigPopup.slot >= 0) {
+                columnConfigPopup.sliderValue = root.slotRatio(columnConfigPopup.slot)
             }
         }
     }
@@ -415,7 +466,7 @@ Item {
 
                         Label {
                             Layout.fillWidth: true
-                            text: headerCell.display
+                            text: root.headerDisplayName(headerCell.display)
                             color: root.themeColors.text
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter

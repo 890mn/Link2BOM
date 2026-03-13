@@ -11,6 +11,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QCoreApplication>
 #include <QStandardPaths>
 #include <QRegularExpression>
 
@@ -28,6 +29,56 @@ QString formatTime(const QString &isoTime)
         return QString();
     }
     return dt.toLocalTime().toString(QStringLiteral("yyyy-MM-dd HH:mm"));
+}
+
+bool writeArchiveFile(const QString &path,
+                      const QString &label,
+                      const QStringList &headers,
+                      const QList<QStringList> &rows,
+                      const QStringList &projects,
+                      const QStringList &categories,
+                      const QString &selectedProject)
+{
+    QJsonObject root;
+    root.insert(QStringLiteral("version"), 1);
+    root.insert(QStringLiteral("label"), label);
+    root.insert(QStringLiteral("savedAt"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+    root.insert(QStringLiteral("selectedProject"), selectedProject);
+
+    QJsonArray projectArray;
+    for (const QString &name : projects) {
+        projectArray.append(name);
+    }
+    root.insert(QStringLiteral("projects"), projectArray);
+
+    QJsonArray categoryArray;
+    for (const QString &name : categories) {
+        categoryArray.append(name);
+    }
+    root.insert(QStringLiteral("categories"), categoryArray);
+
+    QJsonArray headerArray;
+    for (const QString &header : headers) {
+        headerArray.append(header);
+    }
+    root.insert(QStringLiteral("headers"), headerArray);
+
+    QJsonArray rowArray;
+    for (const QStringList &row : rows) {
+        QJsonArray rowCells;
+        for (const QString &cell : row) {
+            rowCells.append(cell);
+        }
+        rowArray.append(rowCells);
+    }
+    root.insert(QStringLiteral("rows"), rowArray);
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return false;
+    }
+    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    return true;
 }
 }
 
@@ -47,6 +98,15 @@ QString ArchiveController::baseDir() const
     QString dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     if (dir.isEmpty()) {
         dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    }
+    const QString appName = QCoreApplication::applicationName().trimmed();
+    if (!appName.isEmpty()) {
+        QString clean = QDir::cleanPath(dir);
+        const QString doubleSuffix = QLatin1Char('/') + appName + QLatin1Char('/') + appName;
+        if (clean.endsWith(doubleSuffix)) {
+            clean = clean.left(clean.size() - appName.size() - 1);
+        }
+        dir = clean;
     }
     return QDir(dir).filePath(QStringLiteral("saves"));
 }
@@ -166,8 +226,9 @@ QVariantList ArchiveController::listSlots() const
                     const QJsonObject obj = doc.object();
                     const QString label = obj.value(QStringLiteral("label")).toString();
                     const QString savedAt = obj.value(QStringLiteral("savedAt")).toString();
+                    const QJsonArray savedRows = obj.value(QStringLiteral("rows")).toArray();
                     const QString timeText = formatTime(savedAt);
-                    hasData = true;
+                    hasData = !savedRows.isEmpty();
 
                     if (i == 0) {
                         title = QStringLiteral("Local Archive (AppData)");
@@ -239,47 +300,106 @@ bool ArchiveController::saveSlot(int index, const QString &label, const QString 
     root.insert(QStringLiteral("headers"), headerArray);
     root.insert(QStringLiteral("rows"), writeRows(rows));
 
-    QString path = defaultSlotPath(index);
-    if (index > 0 && !customPath.trimmed().isEmpty()) {
-        const QString trimmedPath = customPath.trimmed();
-        QFileInfo info(trimmedPath);
+    const QString trimmedPath = customPath.trimmed();
+    bool usedCustomPath = false;
+
+    auto resolveCustomPath = [&](const QString &inputPath) {
+        QFileInfo info(inputPath);
         if (info.suffix().isEmpty()) {
-            QDir().mkpath(trimmedPath);
+            QDir().mkpath(inputPath);
             QString fileName = normalizedLabel;
             const QRegularExpression invalidPattern(QStringLiteral(R"([\\/:*?"<>|])"));
             fileName.replace(invalidPattern, QStringLiteral("_"));
             if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
                 fileName.append(QStringLiteral(".json"));
             }
-            path = QDir(trimmedPath).filePath(fileName);
-        } else {
-            const QString parentDir = info.absolutePath();
-            QDir().mkpath(parentDir);
-            path = info.absoluteFilePath();
-            if (!path.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-                path.append(QStringLiteral(".json"));
-            }
+            return QDir(inputPath).filePath(fileName);
         }
 
-        QVariantMap registry = loadRegistry();
-        registry.insert(QString::number(index), path);
-        if (!saveRegistry(registry)) {
+        const QString parentDir = info.absolutePath();
+        QDir().mkpath(parentDir);
+        QString fullPath = info.absoluteFilePath();
+        if (!fullPath.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+            fullPath.append(QStringLiteral(".json"));
+        }
+        return fullPath;
+    };
+
+    QString path = defaultSlotPath(index);
+    if (index > 0 && !trimmedPath.isEmpty()) {
+        path = resolveCustomPath(trimmedPath);
+        usedCustomPath = true;
+    }
+
+    auto writeArchive = [&](const QString &targetPath) {
+        QFile file(targetPath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             return false;
         }
-    } else if (index > 0) {
-        QVariantMap registry = loadRegistry();
-        if (registry.contains(QString::number(index))) {
-            registry.remove(QString::number(index));
-            saveRegistry(registry);
+        file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        return true;
+    };
+
+    if (!writeArchive(path)) {
+        if (usedCustomPath && index > 0) {
+            path = defaultSlotPath(index);
+            usedCustomPath = false;
+            if (!writeArchive(path)) {
+                return false;
+            }
+        } else {
+            return false;
         }
     }
 
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        return false;
+    if (index > 0) {
+        QVariantMap registry = loadRegistry();
+        const QString key = QString::number(index);
+        if (usedCustomPath) {
+            registry.insert(key, path);
+        } else if (registry.contains(key)) {
+            registry.remove(key);
+        }
+        saveRegistry(registry);
     }
-    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     return true;
+}
+
+void ArchiveController::ensureDefaultSlots(const QStringList &headers,
+                                           const QList<QStringList> &rows,
+                                           const QStringList &projects,
+                                           const QStringList &categories,
+                                           const QString &selectedProject)
+{
+    if (headers.isEmpty()) {
+        return;
+    }
+    QDir().mkpath(baseDir());
+
+    const QString defaultPath = defaultSlotPath(0);
+    if (!QFileInfo::exists(defaultPath)) {
+        writeArchiveFile(defaultPath,
+                         QStringLiteral("Default Archive"),
+                         headers,
+                         rows,
+                         projects,
+                         categories,
+                         selectedProject);
+    }
+
+    QList<QStringList> emptyRows;
+    for (int i = 1; i < 5; ++i) {
+        const QString path = defaultSlotPath(i);
+        if (!QFileInfo::exists(path)) {
+            writeArchiveFile(path,
+                             QStringLiteral("Save%1").arg(i),
+                             headers,
+                             emptyRows,
+                             projects,
+                             categories,
+                             selectedProject);
+        }
+    }
 }
 
 bool ArchiveController::loadSlot(int index)
@@ -288,10 +408,24 @@ bool ArchiveController::loadSlot(int index)
         return false;
     }
 
-    const QString path = resolveSlotPath(index);
+    QString path = resolveSlotPath(index);
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        return false;
+        if (index > 0) {
+            QVariantMap registry = loadRegistry();
+            const QString key = QString::number(index);
+            if (registry.contains(key)) {
+                registry.remove(key);
+                saveRegistry(registry);
+            }
+            path = defaultSlotPath(index);
+            file.setFileName(path);
+            if (!file.open(QIODevice::ReadOnly)) {
+                return false;
+            }
+        } else {
+            return false;
+        }
     }
 
     const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
