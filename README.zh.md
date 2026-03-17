@@ -27,7 +27,7 @@ Link2BOM 是一个基于 Qt 6 / Qt Quick 的桌面工具，用于导入、整理
 
 编译：
 ```powershell
-cmake --build d:/study_data/CS_Major/Software/QT/Link2BOM/build --config Debug --target Link2BOM -j4
+cmake --build ../build --config Debug --target Link2BOM -j4
 ```
 
 运行：

@@ -27,7 +27,7 @@ Prerequisites:
 
 Build:
 ```powershell
-cmake --build d:/study_data/CS_Major/Software/QT/Link2BOM/build --config Debug --target Link2BOM -j4
+cmake --build ../build --config Debug --target Link2BOM -j4
 ```
 
 Run:
