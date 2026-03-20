@@ -33,6 +33,8 @@ set(APP_CPP_SOURCES
     src/app/UiSettingsStore.cpp
     src/app/DefaultDataSeeder.cpp
     src/app/StatusHub.cpp
+    src/app/SpreadsheetConverter.cpp
+    src/app/CsvParsers.cpp
     src/app/DataIoController.cpp
     src/app/ThemeController.cpp
     src/app/ProjectController.cpp
@@ -48,6 +50,9 @@ set(APP_HEADERS
     src/app/UiSettingsStore.h
     src/app/DefaultDataSeeder.h
     src/app/StatusHub.h
+    src/app/SpreadsheetConverter.h
+    src/app/CsvParsers.h
+    src/app/ImportTypes.h
     src/app/DataIoController.h
     src/app/ThemeController.h
     src/app/ProjectController.h

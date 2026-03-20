@@ -483,6 +483,29 @@ bool ArchiveController::deleteSlot(int index)
         registry.remove(key);
         saveRegistry(registry);
     }
-    return removed;
+
+    if (!m_projects || !m_categories || !m_bomModel) {
+        return removed;
+    }
+
+    const QVariantMap snapshot = m_bomModel->exportSnapshot();
+    const QStringList headers = snapshot.value(QStringLiteral("headers")).toStringList();
+    if (headers.isEmpty()) {
+        return removed;
+    }
+
+    const QStringList projects = m_projects->projectNames(true);
+    const QStringList categories = m_categories->categoryNames();
+    const QString selectedProject = m_projects->selectedProject();
+    const QList<QStringList> emptyRows;
+    const QString defaultPath = defaultSlotPath(index);
+    const bool recreated = writeArchiveFile(defaultPath,
+                                            QStringLiteral("Save%1").arg(index),
+                                            headers,
+                                            emptyRows,
+                                            projects,
+                                            categories,
+                                            selectedProject);
+    return removed && recreated;
 }
 
