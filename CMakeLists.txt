@@ -76,6 +76,9 @@ set(APP_QML_FILES
     src/qml/components/AppButton.qml
     src/qml/components/AppToolButton.qml
     src/qml/components/DebugConsole.qml
+    src/qml/components/ModalShell.qml
+    src/qml/components/DialogFooter.qml
+    src/qml/components/FormField.qml
     src/qml/components/DialogHost.qml
     src/qml/components/DiffPane.qml
     src/qml/components/SidebarPane.qml

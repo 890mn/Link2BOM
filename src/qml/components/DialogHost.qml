@@ -108,23 +108,15 @@ Item {
     property string pendingArchiveLabel: ""
     property string pendingArchivePath: ""
 
-    Popup {
+    ModalShell {
         id: projectForImportDialog
-        modal: true
-        focus: true
         width: 420
         implicitHeight: importDialogContent.implicitHeight + 20
         x: Math.round((root.width - width) / 2)
         y: Math.round((root.height - height) / 2)
         parent: Overlay.overlay
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        padding: 10
-
-        background: Rectangle {
-            radius: 12
-            color: root.subtleColor
-            border.color: root.borderColor
-        }
+        subtleColor: root.subtleColor
+        borderColor: root.borderColor
 
         ColumnLayout {
             id: importDialogContent
@@ -176,19 +168,13 @@ Item {
 
             RowLayout {
                 Layout.fillWidth: true
-                Item { Layout.fillWidth: true }
-
-                AppButton {
+                DialogFooter {
+                    Layout.fillWidth: true
                     themeColors: root.themeColors
-                    text: root.txSafe("common.cancel", "Cancel")
-                    onClicked: projectForImportDialog.close()
-                }
-
-                AppButton {
-                    themeColors: root.themeColors
-                    text: root.txSafe("common.ok", "OK")
-                    accent: true
-                    onClicked: {
+                    cancelText: root.txSafe("common.cancel", "Cancel")
+                    okText: root.txSafe("common.ok", "OK")
+                    onCancelled: projectForImportDialog.close()
+                    onAccepted: {
                         const created = newProjectField.text.trim()
                         const target = created.length > 0 ? created : projectCombo.currentText
                         if (!target || target === "All Projects") {
@@ -236,23 +222,15 @@ Item {
         exportFileDialog.open()
     }
 
-    Popup {
+    ModalShell {
         id: archiveDialog
-        modal: true
-        focus: true
         width: 520
         implicitHeight: archiveContent.implicitHeight + 20
         x: Math.round((root.width - width) / 2)
         y: Math.round((root.height - height) / 2)
         parent: Overlay.overlay
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        padding: 10
-
-        background: Rectangle {
-            radius: 12
-            color: root.subtleColor
-            border.color: root.borderColor
-        }
+        subtleColor: root.subtleColor
+        borderColor: root.borderColor
 
         ColumnLayout {
             id: archiveContent
@@ -312,46 +290,28 @@ Item {
                 }
             }
 
-            Label {
-                text: root.txSafe("archive.name", "Save name")
-                color: root.textColor
-            }
-
-            TextField {
+            FormField {
                 id: archiveNameField
                 Layout.fillWidth: true
+                label: root.txSafe("archive.name", "Save name")
                 placeholderText: defaultArchiveName(activeArchiveIndex)
-                implicitHeight: 36
-                color: root.textColor
-                placeholderTextColor: root.mutedTextColor
-                selectionColor: root.primaryColor
-                selectedTextColor: "#FFFFFF"
-                background: Rectangle {
-                    radius: 10
-                    color: root.cardColor
-                    border.color: root.borderColor
-                }
+                textColor: root.textColor
+                mutedTextColor: root.mutedTextColor
+                primaryColor: root.primaryColor
+                cardColor: root.cardColor
+                borderColor: root.borderColor
             }
 
-            Label {
-                text: root.txSafe("archive.path", "Save path")
-                color: root.textColor
-            }
-
-            TextField {
+            FormField {
                 id: archivePathField
                 Layout.fillWidth: true
+                label: root.txSafe("archive.path", "Save path")
                 placeholderText: defaultArchiveDir()
-                implicitHeight: 36
-                color: root.textColor
-                placeholderTextColor: root.mutedTextColor
-                selectionColor: root.primaryColor
-                selectedTextColor: "#FFFFFF"
-                background: Rectangle {
-                    radius: 10
-                    color: root.cardColor
-                    border.color: root.borderColor
-                }
+                textColor: root.textColor
+                mutedTextColor: root.mutedTextColor
+                primaryColor: root.primaryColor
+                cardColor: root.cardColor
+                borderColor: root.borderColor
             }
 
             Repeater {
@@ -513,10 +473,8 @@ Item {
         }
     }
 
-    Popup {
+    ModalShell {
         id: inputDialog
-        modal: true
-        focus: true
         property string mode: ""
         property string titleText: ""
         width: 420
@@ -524,14 +482,8 @@ Item {
         x: Math.round((root.width - width) / 2)
         y: Math.round((root.height - height) / 2)
         parent: Overlay.overlay
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        padding: 10
-
-        background: Rectangle {
-            radius: 12
-            color: root.subtleColor
-            border.color: root.borderColor
-        }
+        subtleColor: root.subtleColor
+        borderColor: root.borderColor
 
         ColumnLayout {
             id: inputDialogContent
@@ -544,64 +496,43 @@ Item {
                 font.bold: true
             }
 
-            TextField {
+            FormField {
                 id: dialogInput
                 Layout.fillWidth: true
+                label: ""
                 placeholderText: root.txSafe("dialog.inputName", "Please enter a name")
-                implicitHeight: 36
-                color: root.textColor
-                placeholderTextColor: root.mutedTextColor
-                selectionColor: root.primaryColor
-                selectedTextColor: "#FFFFFF"
-                background: Rectangle {
-                    radius: 10
-                    color: root.cardColor
-                    border.color: root.borderColor
-                }
+                textColor: root.textColor
+                mutedTextColor: root.mutedTextColor
+                primaryColor: root.primaryColor
+                cardColor: root.cardColor
+                borderColor: root.borderColor
             }
 
-            RowLayout {
+            DialogFooter {
                 Layout.fillWidth: true
-                Item { Layout.fillWidth: true }
-
-                AppButton {
-                    themeColors: root.themeColors
-                    text: root.txSafe("common.cancel", "Cancel")
-                    onClicked: inputDialog.close()
-                }
-
-                AppButton {
-                    themeColors: root.themeColors
-                    text: root.txSafe("common.ok", "OK")
-                    accent: true
-                    onClicked: {
-                        root.inputAccepted(inputDialog.mode, dialogInput.text.trim())
-                        dialogInput.clear()
-                        inputDialog.close()
-                    }
+                themeColors: root.themeColors
+                cancelText: root.txSafe("common.cancel", "Cancel")
+                okText: root.txSafe("common.ok", "OK")
+                onCancelled: inputDialog.close()
+                onAccepted: {
+                    root.inputAccepted(inputDialog.mode, dialogInput.text.trim())
+                    dialogInput.text = ""
+                    inputDialog.close()
                 }
             }
         }
     }
 
-    Popup {
+    ModalShell {
         id: settingsDialog
-        modal: true
-        focus: true
         width: 340
         implicitHeight: settingsContent.implicitHeight + 20
         x: Math.round((root.width - width) / 2)
         y: Math.round((root.height - height) / 2)
         parent: Overlay.overlay
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        padding: 10
         property string pendingLanguage: root.uiLanguage
-
-        background: Rectangle {
-            radius: 12
-            color: root.subtleColor
-            border.color: root.borderColor
-        }
+        subtleColor: root.subtleColor
+        borderColor: root.borderColor
 
         ColumnLayout {
             id: settingsContent
@@ -647,24 +578,15 @@ Item {
                 }
             }
 
-            RowLayout {
+            DialogFooter {
                 Layout.fillWidth: true
-                Item { Layout.fillWidth: true }
-
-                AppButton {
-                    themeColors: root.themeColors
-                    text: root.txSafe("common.cancel", "Cancel")
-                    onClicked: settingsDialog.close()
-                }
-
-                AppButton {
-                    themeColors: root.themeColors
-                    text: root.txSafe("common.ok", "OK")
-                    accent: true
-                    onClicked: {
-                        root.languageApplied(settingsDialog.pendingLanguage)
-                        settingsDialog.close()
-                    }
+                themeColors: root.themeColors
+                cancelText: root.txSafe("common.cancel", "Cancel")
+                okText: root.txSafe("common.ok", "OK")
+                onCancelled: settingsDialog.close()
+                onAccepted: {
+                    root.languageApplied(settingsDialog.pendingLanguage)
+                    settingsDialog.close()
                 }
             }
         }
