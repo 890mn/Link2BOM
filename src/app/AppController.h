@@ -12,6 +12,9 @@
 #include "ArchiveController.h"
 #include "ProjectController.h"
 #include "ThemeController.h"
+#include "UiSettingsStore.h"
+#include "DefaultDataSeeder.h"
+#include "StatusHub.h"
 
 class AppController : public QObject
 {
@@ -51,8 +54,6 @@ signals:
 
 private:
     void setStatus(const QString &status);
-    void loadUiSettings();
-    void saveUiSettings() const;
 
     ThemeController m_theme;
     ProjectController m_projects;
@@ -61,7 +62,9 @@ private:
     DataIoController m_io;
     ArchiveController m_archive;
     LogRelay m_logRelay;
-    QString m_status;
+    UiSettingsStore m_uiSettings;
+    DefaultDataSeeder m_defaultSeeder;
+    StatusHub m_statusHub;
     QHash<QString, QVariantList> m_bomWidthRatiosByLayout;
 };
 

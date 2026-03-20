@@ -30,6 +30,9 @@ set(APP_CPP_SOURCES
     src/main.cpp
     src/app/AppLogger.cpp
     src/app/AppController.cpp
+    src/app/UiSettingsStore.cpp
+    src/app/DefaultDataSeeder.cpp
+    src/app/StatusHub.cpp
     src/app/DataIoController.cpp
     src/app/ThemeController.cpp
     src/app/ProjectController.cpp
@@ -42,6 +45,9 @@ set(APP_CPP_SOURCES
 set(APP_HEADERS
     src/app/AppLogger.h
     src/app/AppController.h
+    src/app/UiSettingsStore.h
+    src/app/DefaultDataSeeder.h
+    src/app/StatusHub.h
     src/app/DataIoController.h
     src/app/ThemeController.h
     src/app/ProjectController.h
