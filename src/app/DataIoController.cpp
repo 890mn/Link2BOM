@@ -55,13 +55,13 @@ void DataIoController::importLichuang(const QUrl &fileUrl, const QString &projec
 
     const QString localFile = fileUrl.toLocalFile();
     if (localFile.isEmpty()) {
-        emit statusMessage(QStringLiteral("Import failed: no file selected"));
+        emit statusMessage(QStringLiteral("Import failed: please select a file."));
         return;
     }
 
     const QString targetProject = projectName.trimmed();
     if (targetProject.isEmpty() || targetProject == QStringLiteral("All Projects")) {
-        emit statusMessage(QStringLiteral("Import failed: select a specific project"));
+        emit statusMessage(QStringLiteral("Import failed: please select a project."));
         return;
     }
 
@@ -132,7 +132,7 @@ void DataIoController::importLichuang(const QUrl &fileUrl, const QString &projec
         }
     }
 
-    emit statusMessage(QStringLiteral("Imported %1 -> %2").arg(fileUrl.fileName(), targetProject));
+    emit statusMessage(QStringLiteral("Import complete: %1 -> %2.").arg(fileUrl.fileName(), targetProject));
 
     if (!targetProject.isEmpty()) {
         m_projects->setSelectedProject(targetProject);
@@ -148,13 +148,13 @@ void DataIoController::importGeneric(const QUrl &fileUrl, const QString &project
 
     const QString localFile = fileUrl.toLocalFile();
     if (localFile.isEmpty()) {
-        emit statusMessage(QStringLiteral("Import failed: no file selected"));
+        emit statusMessage(QStringLiteral("Import failed: please select a file."));
         return;
     }
 
     const QString targetProject = projectName.trimmed();
     if (targetProject.isEmpty() || targetProject == QStringLiteral("All Projects")) {
-        emit statusMessage(QStringLiteral("Import failed: select a specific project"));
+        emit statusMessage(QStringLiteral("Import failed: please select a project."));
         return;
     }
 
@@ -176,9 +176,9 @@ void DataIoController::importGeneric(const QUrl &fileUrl, const QString &project
 
     if (!m_bomModel->appendRows(result.headers, result.rows)) {
         m_bomModel->setSourceData(result.headers, result.rows);
-        emit statusMessage(QStringLiteral("Imported and replaced BOM headers due to new template."));
+        emit statusMessage(QStringLiteral("Import complete: BOM headers replaced to match template."));
     } else {
-        emit statusMessage(QStringLiteral("Imported %1 -> %2").arg(fileUrl.fileName(), targetProject));
+        emit statusMessage(QStringLiteral("Import complete: %1 -> %2.").arg(fileUrl.fileName(), targetProject));
     }
 
     if (!targetProject.isEmpty()) {
@@ -194,13 +194,13 @@ bool DataIoController::exportCsv(const QUrl &fileUrl)
 
     const QString localFile = fileUrl.toLocalFile();
     if (localFile.isEmpty()) {
-        emit statusMessage(QStringLiteral("Export failed: no file selected"));
+        emit statusMessage(QStringLiteral("Export failed: please select a file."));
         return false;
     }
 
     QFile out(localFile);
     if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        emit statusMessage(QStringLiteral("Export failed: cannot write %1").arg(localFile));
+        emit statusMessage(QStringLiteral("Export failed: cannot write %1.").arg(localFile));
         return false;
     }
 
@@ -236,7 +236,7 @@ bool DataIoController::exportCsv(const QUrl &fileUrl)
     }
 
     out.close();
-    emit statusMessage(QStringLiteral("Exported CSV: %1 (%2 rows)").arg(fileUrl.fileName()).arg(rows));
+    emit statusMessage(QStringLiteral("Export complete: %1 (%2 rows).").arg(fileUrl.fileName()).arg(rows));
     return true;
 }
 
